@@ -10,27 +10,27 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "ag-grid-community": "^31.1.1",
-    "ag-grid-react": "^31.1.1",
-    "bootstrap": "^5.3.3",
+    "ag-grid-community": "^35.1.0",
+    "ag-grid-react": "^35.1.0",
+    "bootstrap": "^5.3.8",
     "localforage": "^1.10.0",
-    "match-sorter": "^6.3.4",
-    "react": "^18.2.0",
-    "react-bootstrap": "^2.10.1",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.3",
+    "match-sorter": "^8.2.0",
+    "react": "^19.2.4",
+    "react-bootstrap": "^2.10.10",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
     "sort-by": "^1.2.0"
   },
   "devDependencies": {
-    "@types/react": "^18.2.64",
-    "@types/react-dom": "^18.2.21",
-    "@typescript-eslint/eslint-plugin": "^7.1.1",
-    "@typescript-eslint/parser": "^7.1.1",
-    "@vitejs/plugin-react": "^4.2.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.5",
-    "typescript": "^5.2.2",
-    "vite": "^5.1.6"
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
+    "@vitejs/plugin-react": "^5.1.4",
+    "eslint": "^10.0.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
   }
 }

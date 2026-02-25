@@ -1,5 +1,8 @@
 // @ts-nocheck
 
+import { INet } from "../types";
+import { ROUND_GAME_MAP } from "./constants";
+
 
 
 
@@ -69,52 +72,46 @@ export const formattedDate = (eventISODate) => {
     return month + "-" + day + "-" + year;
 }
 
-
-export const checkRoundCompleted = (item, allNets) => {
-    const reportComplete = new Object();
-    reportComplete.complete = [];
-    reportComplete.incomplete = [];
-
-
-    // console.log(item, allNets);
-    function rounwiseCheck(game1, game2, game3, an, ani, anp, anpi) {
-        if (anp[game1] && anp[game2] && anp[game3]) {
-            // RETURN NO INCOMPLETED NET 
-            // console.log("Completed net - ", ani + 1);
-            reportComplete.complete.push(ani + 1);
-        } else {
-            // RETURN INCOMPLETED NET NUMBER 
-            // console.log("Incompleted performance - ", anp);
-            // console.log("Incompleted net - ", ani + 1);
-            reportComplete.incomplete.push(ani + 1);
-        }
-    }
+interface IRoundResponse{complete: number[], incomplete: number[]}
 
 
 
-    if(allNets){
-        allNets.forEach((an, ani) => {
-            an.performance.forEach((anp, anpi) => {
-                if (item === 1) {
-                    // CHECK GAME 1, 2, 3
-                    rounwiseCheck("game1", "game2", "game2", an, ani, anp, anpi);
-                } else if (item === 2) {
-                    rounwiseCheck("game4", "game5", "game6", an, ani, anp, anpi);
-                } else if (item === 3) {
-                    rounwiseCheck("game7", "game8", "game9", an, ani, anp, anpi);
-                } else if (item === 4) {
-                    rounwiseCheck("game10", "game11", "game12", an, ani, anp, anpi);
-                }
-            });
-        });
-    }else{
-        reportComplete.incomplete.push(" ");
-    }
+/**
+ * Checks if a round is completed or not based on games played in all nets.
+ * @param roundNumber - 1-based round index
+ * @param allNets - array of nets with performances
+ * @returns object with `complete` and `incomplete` arrays containing net numbers
+ */
+export const checkRoundCompleted = (
+  roundNumber: number,
+  allNets: INet[]
+): IRoundResponse => {
+  const result: IRoundResponse = { complete: [], incomplete: [] };
 
 
-    // [...new Set(array)];
-    if (reportComplete.complete.length > 0) reportComplete.complete = [...new Set(reportComplete.complete)];
-    if (reportComplete.incomplete.length > 0) reportComplete.incomplete = [...new Set(reportComplete.incomplete)];
 
-    return reportComplete;
-}
+  const gameKeys = ROUND_GAME_MAP[roundNumber] || [];
+
+  if (!allNets || allNets.length === 0) {
+    result.incomplete.push(" ");
+    return result;
+  }
+
+  allNets.forEach((net, netIndex) => {
+    net.performance.forEach((perf) => {
+      // Check if all required games for this round are present
+      const isComplete = gameKeys.every((key) => perf[key]);
+      if (isComplete) {
+        result.complete.push(netIndex + 1);
+      } else {
+        result.incomplete.push(netIndex + 1);
+      }
+    });
+  });
+
+  // Remove duplicates
+  result.complete = Array.from(new Set(result.complete));
+  result.incomplete = Array.from(new Set(result.incomplete));
+
+  return result;
+};

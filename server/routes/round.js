@@ -13,49 +13,6 @@ const router = express.Router();
 
 
 
-// GET PERFORMANCE 
-/*
-
-try {
-    // console.log("Req params - ",req.params);
-    const {roundNum, eventID} = req.params;
-    const rNumInt = parseInt(roundNum);
-    if (rNumInt === 1) {
-        // SEARCH FOR EXISTING ROUND - IF THERE IS NOT EXISTING ROUND USE ALL PERFORMANCE
-        const roundExist = await Round.findOne({event: eventID, no: roundNum});
-        console.log("round Exist - ",roundExist);
-        let performances = null;
-        if(roundExist){
-            // performances = roundExist
-            console.log(roundExist);
-        }else{
-            performances = await Performance.find({ event: eventID }).populate({ path: "participant", select: "firstname lastname" }).exec();
-        }
-        const rankingPerformance = performances.sort(wholeRanking)
-        // // console.log(performances.length);
-        res.status(200).json({ msg: 'Get all performance of an event', rankingPerformance });
-    } else {
-        console.log(roundNum);
-    //     const findPreviousRound = await Round.findOne({ event: eventID, no: roundNum })
-    //         .populate({
-    //             path: "nets",
-    //             select: "performance",
-    //             populate: {
-    //                 path: 'performance',
-    //                 select: 'participant nog net game1 game2 game3 game4 game5 game6 game7 game8 game9 game10 game11 game12 game13 game14 game15',
-    //                 populate: {
-    //                     path: "participant",
-    //                     select: "firstname lastname"
-    //                 }
-    //             }
-    //         })
-    //         .exec();
-    }
-} catch (error) {
-    console.log(error);
-}
-*/
-
 // ⛏️⛏️ GET SINGLE ROUND ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
 router.get('/get-single-round/:eventID/:roundNum', async (req, res, next) => {
     const { eventID, roundNum } = req.params;
@@ -63,9 +20,9 @@ router.get('/get-single-round/:eventID/:roundNum', async (req, res, next) => {
         const roundExist = await findRound(eventID, roundNum, Round);
 
         // console.log("round Exist - ",roundExist);
-        let performances = null;
-        let leftRound = null;
-        let rankNets = null;
+        let performances = [];
+        let leftRound = [];
+        let rankNets = [];
 
         // SHOW EXISTING PERFORMANCES EXISTING LEFT NETS AND MORE
         if (roundExist) {

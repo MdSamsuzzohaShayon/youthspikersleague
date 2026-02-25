@@ -4,7 +4,7 @@ const { GENERAL, SUPER } = require("../utils/Role");
 module.exports = {
     ensureAuth: async (req, res, next) => {
         try {
-          if (!req.headers.authorization) return res.json({ msg: "Not authenticated", user: null });
+          if (!req.headers.authorization) return res.status(401).json({ msg: 'Unauthenticated' });
           const accessToken = req.headers.authorization.split(" ")[1];
           if (!accessToken) return res.status(401).send({ msg: 'Unauthenticated' });
           const decodedToken = await jwt.verify(accessToken, process.env.JWT_SECRET);
@@ -20,6 +20,7 @@ module.exports = {
           if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ msg: 'Unauthenticated' });
           }
+          return res.status(500).json({ msg: error?.message || "Internal Server Error" });
         }
       },
     ensureGuast: (req, res, next) => {

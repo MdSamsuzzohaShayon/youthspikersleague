@@ -26,7 +26,7 @@ const Menu = (props) => {
                     <Navbar.Brand >
                         <Link className="nav-link" to="/home">
                             <img
-                                src="/icon/logo.png"
+                                src="/logo.png"
                                 width="30"
                                 height="30"
                                 className="d-inline-block align-top"

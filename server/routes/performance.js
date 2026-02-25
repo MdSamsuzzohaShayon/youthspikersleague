@@ -75,7 +75,7 @@ router.post('/:eventID',
                 });
 
                 const [createEvent, performance] = await Promise.all([
-                    Event.findByIdAndUpdate({ _id: req.params.eventID }, { $push: { participants: participant._id } }, { new: true }),
+                    Event.findByIdAndUpdate({ _id: req.params.eventID }, { $push: { participants: participant._id } }, { returnDocument: 'after' }),
                     new_performance.save(),
                 ]);
 
@@ -142,7 +142,7 @@ router.post('/multiple/:eventID', ensureAuth, async (req, res, next) => {
                 await Event.findByIdAndUpdate(
                     { _id: req.params.eventID },
                     { $push: { participants: participant._id } },
-                    { new: true }
+                    { returnDocument: 'after' }
                 );
             }
         }
@@ -176,15 +176,15 @@ router.put('/update-performance/:eventID/:roundNum', ensureAuth, async (req, res
 
 
                 const select = "participant net game1 game2 game3 game4 game5 game6 game7 game8 game9 game10 game11 game12 game13 game14 game15 pre_rank";
-                const findNet = await Net.findOneAndUpdate({ _id: us.netID }, { wp: us.wp })
-                    .populate({
-                        path: "performance",
-                        select,
-                        populate: {
-                            path: "participant",
-                            select: "firstname lastname"
-                        }
-                    });
+
+                const findNet = await Net.findOneAndUpdate({ _id: us.netID }, { wp: us.wp }, { returnDocument: 'after' }).populate({
+                    path: "performance",
+                    select,
+                    populate: {
+                        path: "participant",
+                        select: "firstname lastname"
+                    }
+                });
 
                 await updateOnlyPoint(findNet, roundNum, us.wp);
 
@@ -472,7 +472,7 @@ router.delete('/:id', ensureAuth, async (req, res, next) => {
         if (req.userRole === SUPER) {
             const participant = await Participant.findByIdAndDelete(req.params.id);
             const performance = await Performance.findOneAndDelete({ participant: req.params.id });
-            const event = await Event.findOneAndUpdate({ participants: participant._id }, { $pull: { participants: participant._id } }, { new: true });
+            const event = await Event.findOneAndUpdate({ participants: participant._id }, { $pull: { participants: participant._id } }, { returnDocument: 'after' });
             res.status(200).json({ msg: 'Delete a participant', participant, performance, event });
         } else {
             res.status(200).json({ msg: 'Only super user are able to delete any perticipant' });
