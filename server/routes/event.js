@@ -21,19 +21,17 @@ const router = express.Router();
 router.post('/',
     ensureAuth,
     check('title', "Title must not empty and a valid email").notEmpty(),
-    (req, res, next) => {
+    async (req, res, next) => {
         const valErrs = validationResult(req);
         if (!valErrs.isEmpty()) {
             return res.status(400).json({ errors: valErrs.errors });
         } else {
             // console.log(req.body);
-            Event.create({
+            const newEvent = await Event.create({
                 title: req.body.title,
                 date: req.body.date,
-            }, (err, docs) => {
-                res.status(200).json({ request: 'Success', event: docs });
-                // console.log(docs);
             });
+            res.status(201).json({ request: 'Success', event: newEvent });
         }
     });
 

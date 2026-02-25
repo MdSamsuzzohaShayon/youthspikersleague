@@ -1,5 +1,5 @@
 // ⛏️⛏️ ALL IMPORTS ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
-require('dotenv').config({path:__dirname+'/config/.env' });
+require('dotenv').config({ path: __dirname + '/config/.env' });
 const express = require('express');
 const passport = require('passport');
 const app = express();
@@ -17,19 +17,27 @@ const roundRoute = require('./routes/round');
 const adminGenerator = require('./config/adminGenerator');
 
 // ⛏️⛏️ MONGO DB DATABASE ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
-mongoose.connect(process.env.MONGO_LOCAL_URI, { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true, useFindAndModify: false }, (err) => {
-    if (err) throw err;
-    console.log("Database is connected successfully ");
-});
+const connectDB = async () => {
+    try {
+        const conn = await mongoose.connect(process.env.MONGO_LOCAL_URI);
+
+        console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+    } catch (error) {
+        console.error('❌ MongoDB Connection Error:', error.message);
+        process.exit(1); // Stop app if DB fails
+    }
+};
+
+connectDB();
 
 // ⛏️⛏️ MIDDLEWARE SETUP ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
 app.use(cors({ origin: "*" }));
-app.use(function(req,res,next){
+app.use(function (req, res, next) {
     let origin = req.headers.origin;
-    res.header('Access-Control-Allow-Origin',origin);
-    res.header('Access-Control-Allow-Headers',"Origin, X-Requested-With, Content-Type, Accept");
-    res.header('Access-Control-Allow-Credentials','true');
-    res.header('Access-Control-Allow-Methods','POST,GET,OPTIONS,PUT,PATCH,DELETE');
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Headers', "Origin, X-Requested-With, Content-Type, Accept");
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'POST,GET,OPTIONS,PUT,PATCH,DELETE');
     next();
 });
 // console.log(process.env.HOSTNAME);
@@ -66,4 +74,4 @@ adminGenerator();
 
 // ⛏️⛏️ SERVER ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
 const PORT = process.env.PORT || 9000;
-app.listen(PORT,'0.0.0.0', () => console.log('Server is running on: ' + PORT));
+app.listen(PORT, '0.0.0.0', () => console.log('Server is running on: ' + PORT));

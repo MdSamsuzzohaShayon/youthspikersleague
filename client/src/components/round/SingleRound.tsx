@@ -1,358 +1,287 @@
-import React, { useRef, useState, useEffect } from "react";
-import {
-  hostname,
-  POINT,
-  POINT_DIFFERENTIAL,
-  SCORE,
-} from "../../utils/global";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { hostname } from "../../utils/global";
 import Loader from "../elements/Loader";
 import AddParticipant from "../participant/AddParticipant";
-import {
-  getTotalPointOfARound,
-  getTDRound,
-} from "../../utils/tptd";
 import { showLiftedPefrormance } from "../../utils/performance";
 import { tabKeyFocusChange } from "../../utils/helpers";
-import { AgGridReact } from "ag-grid-react";
-import { Modal, Button, ToastBody } from "react-bootstrap";
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-alpine.css";
-import CustomCellRenderer from "./CustomCellRenderer";
 import NetOfARound from "./NetOfARound";
+import { IPerformance, IRound } from "../../types";
+import { useNavigate } from "react-router-dom";
+import { ASSIGN_BUTTON_LABELS, ASSIGN_TYPE, ROUND_ASSIGN_URL_SEGMENTS, type AssignType } from "../../utils/constants";
+import ViewToggle from "./ViewToggle";
+import StatusMessage from "./StatusMessage";
+import ScoreConfirmModal from "./ScoreConfirmModal";
+import PerformanceTableRow from "./PerformanceTableRow";
+import ShowLiftedPerformances from "./LeftedPerformanceRow";
 
-const RANK_ASSIGN = "RANK_ASSIGN",
-  PRERANK_ASSIGN = "PRERANK_ASSIGN",
-  PACK_ASSIGN = "PACK_ASSIGN";
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-
-
-interface IProcessRow {
-  _id: string;
-  Name: string;
-  Ranking: number; //getRankingNumber(index, performances, roundNum);
-  Point: string;
-  "Point Diffential": string;
-  Action: React.ReactNode;
+interface SingleRoundProps {
+  round: IRound;
+  initialize: boolean;
+  roundNum: number;
+  rankPerformanceInNet: any;
+  eventID: string;
+  performances: IPerformance[];
+  leftRound: IPerformance[];
+  game: number[];
+  incomepleteMessage: string | null;
+  updateNets: (value: boolean) => void;
+  activeItemHandler: (e: React.MouseEvent, roundNum: number) => void;
+  refetchFunc?: () => Promise<void>;
 }
 
-function SingleRound(props) {
-  const { nets } = props.round;
-  const { roundNum, rankPerformanceInNet } = props;
+interface DragState {
+  index: number;
+  id: string;
+}
 
-  // const [parent, setParent] = useState(null);
+
+
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const getAuthToken = (): string | null => localStorage.getItem("token");
+
+const buildPostRequest = (body: object, token: string | null): RequestInit => ({
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  },
+  body: JSON.stringify(body),
+});
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+function SingleRound(props: SingleRoundProps) {
+  const { roundNum, rankPerformanceInNet, eventID } = props;
+  const navigate = useNavigate();
+
+  // ── State ──
   const [isLoading, setIsLoading] = useState(false);
-  const [performances, setPerformances] = useState([]); // PARTICIPANTS
+  const [performances, setPerformances] = useState<IPerformance[]>([]);
+  const [orderedPerformances, setOrderedPerformances] = useState<IPerformance[]>([]);
+  const [leftedPerformances, setLeftedPerformances] = useState<IPerformance[]>([]);
   const [showPerformances, setShowPerformances] = useState(true);
-  const [leftedPerformance, setLeftedPerformance] = useState([]);
-  const [token, setToken] = useState<string | null>(null)
+  const [assignType, setAssignType] = useState<AssignType | null>(null);
 
+  // Confirmation modal state
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
-  const gridRef = useRef();
+  // Status notification state
+  const [statusMessage, setStatusMessage] = useState<{ visible: boolean; isNegative: boolean }>({
+    visible: false,
+    isNegative: false,
+  });
 
-  const [assignType, setAssignType] = useState(null);
+  // Drag-and-drop state
+  const [draggedItem, setDraggedItem] = useState<DragState | null>(null);
 
-  // SMS ON ASSIGN NET
-  const [openSMS, setOpenSMS] = useState(false);
-  const [negativeSMS, setNegativeSMS] = useState(false);
+  // ── Memoized values ──
+  const nets = useMemo(() => props.round?.nets ?? [], [props.round]);
 
-  // MODAL
-  const [assignNetShow, setAssignNetShow] = useState(false);
-  const handleNetClose = (e, update) => {
-    try {
-      setOpenSMS(true);
-      if (update === true) {
-        setNegativeSMS(false);
-        switch (assignType) {
-          case RANK_ASSIGN:
-            assignNetHandler();
-            break;
-          case PRERANK_ASSIGN:
-            Assign();
-            break;
-          case PACK_ASSIGN:
-            packAssign();
-            break;
-          default:
-            break;
-        }
-      } else {
-        setNegativeSMS(true);
-      }
-      setAssignNetShow(false);
-    } catch (error) {
-      console.log(error);
-    }
-  };
+  console.log(props);
+  
 
-
-  // https://reactjs.org/docs/hooks-effect.html#effects-with-cleanup
-  // ⛏️⛏️ SETTING DEFAULT VALUE AND UNMOUNT
+  // ── Effects ──
   useEffect(() => {
-    // STYLE GOT POINT
-
-    const t = localStorage.getItem("token");
-    if (t) {
-      setToken(t);
-    }
     setPerformances([...props.performances]);
-    // IF THIS IS NOT INITIALIZEABLE
-    setLeftedPerformance(props.leftRound);
-    if (props.round.length !== 0) {
-      setShowPerformances(false);
+    setOrderedPerformances([...props.performances]);
+    setLeftedPerformances(props.leftRound);
+    if (!props.round) setShowPerformances(false);
+    setTimeout(tabKeyFocusChange, 1000);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!statusMessage.visible) return;
+    const timer = setTimeout(
+      () => setStatusMessage({ visible: false, isNegative: false }),
+      3000
+    );
+    return () => clearTimeout(timer);
+  }, [statusMessage.visible]);
+
+  // ── API calls ──
+  const postToApi = useCallback(
+    async (urlSegment: string, body: object): Promise<Response> => {
+      const token = getAuthToken();
+      const response = await fetch(
+        `${hostname}/api/net/${urlSegment}/${eventID}/${roundNum}`,
+        buildPostRequest(body, token)
+      );
+      if (response.status === 401) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        navigate("/admin");
+      }
+      return response;
+    },
+    [eventID, roundNum, navigate]
+  );
+
+  const assignNetByRank = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await postToApi("assign-net", { performances: performances.map((p)=> p._id), leftedPerformance: leftedPerformances.map((p)=> p._id) });
+      props.updateNets(true);
+    } catch (error) {
+      console.error("[assignNetByRank]", error);
+    } finally {
+      setIsLoading(false);
     }
-    setTimeout(() => {
-      tabKeyFocusChange();
-    }, 1000);
+  }, [performances, leftedPerformances, postToApi, props]);
+
+  const assignNetByPreRank = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const urlSegment = ROUND_ASSIGN_URL_SEGMENTS[roundNum] ?? "assign-net";
+      await postToApi(urlSegment, {
+        performances: orderedPerformances.map((p)=> p._id),
+        leftedPerformance: leftedPerformances.map((p)=> p._id),
+      });
+      props.updateNets(true);
+    } catch (error) {
+      console.error("[assignNetByPreRank]", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [orderedPerformances, leftedPerformances, roundNum, postToApi, props]);
+
+  const assignNetByPack = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await postToApi("pack-assign-net", { performances, leftedPerformance: leftedPerformances });
+      props.updateNets(true);
+    } catch (error) {
+      console.error("[assignNetByPack]", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [performances, leftedPerformances, postToApi, props]);
+
+  // ── Modal handlers ──
+  const handleConfirmModalClose = useCallback(
+    (hasExistingScore: boolean) => {
+      setStatusMessage({ visible: true, isNegative: hasExistingScore });
+      setIsConfirmModalOpen(false);
+
+      if (!hasExistingScore) {
+        if (assignType === ASSIGN_TYPE.RANK) assignNetByRank();
+        else if (assignType === ASSIGN_TYPE.PRERANK) assignNetByPreRank();
+        else if (assignType === ASSIGN_TYPE.PACK) assignNetByPack();
+      }
+    },
+    [assignType, assignNetByRank, assignNetByPreRank, assignNetByPack]
+  );
+
+  // ── Participant management ──
+  const handleLeftPerformance = useCallback(
+    (e: React.MouseEvent, performanceId: string) => {
+      e.preventDefault();
+      const leaving = performances.find((p) => p._id === performanceId);
+      if (!leaving) return;
+      setPerformances((prev) => prev.filter((p) => p._id !== performanceId));
+      setOrderedPerformances((prev) => prev.filter((p) => p._id !== performanceId));
+      setLeftedPerformances((prev) => [...prev, leaving]);
+    },
+    [performances]
+  );
+
+  const handleRecoverPerformance = useCallback(
+    (e: React.MouseEvent, performanceId: string) => {
+      e.preventDefault();
+      const recovering = leftedPerformances.find((p) => p._id === performanceId);
+      if (!recovering) return;
+      setPerformances((prev) => [...prev, recovering]);
+      setOrderedPerformances((prev) => [...prev, recovering]);
+      setLeftedPerformances((prev) => prev.filter((p) => p._id !== performanceId));
+    },
+    [leftedPerformances]
+  );
+
+  const handleSaveNewParticipant = useCallback((res: any) => {
+    const newPerformance: IPerformance = {
+      event: eventID,
+      pre_rank: 0,
+      participant: {
+        _id: res.participant._id,
+        firstname: res.participant.firstname,
+        lastname: res.participant.lastname,
+      },
+      _id: res.performance._id,
+    };
+    setPerformances((prev) => [...prev, newPerformance]);
+    setOrderedPerformances((prev) => [...prev, newPerformance]);
+  }, [eventID]);
+
+  // ── Drag-and-drop handlers ──
+  const handleDragStart = useCallback((e: React.DragEvent, index: number, id: string) => {
+    setDraggedItem({ index, id });
+    e.dataTransfer.setData("text/plain", id);
+    e.dataTransfer.effectAllowed = "move";
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, _index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetIndex: number) => {
+      e.preventDefault();
+      if (!draggedItem) return;
+
+      const draggedId = e.dataTransfer.getData("text/plain");
+      const sourceIndex = orderedPerformances.findIndex((p) => p._id === draggedId);
+      if (sourceIndex === -1) return;
+
+      const reordered = [...orderedPerformances];
+      const [moved] = reordered.splice(sourceIndex, 1);
+      reordered.splice(targetIndex, 0, moved);
+
+      setOrderedPerformances(reordered);
+      setDraggedItem(null);
+    },
+    [draggedItem, orderedPerformances]
+  );
+
+  const handleDragEnd = useCallback(() => setDraggedItem(null), []);
+
+  const handleRankInputChange = useCallback(
+    (index: number, newRanking: number) => {
+      const reordered = [...orderedPerformances];
+      const [item] = reordered.splice(index, 1);
+      reordered.splice(Math.min(newRanking - 1, reordered.length), 0, item);
+      setOrderedPerformances(reordered);
+    },
+    [orderedPerformances]
+  );
+
+  // ── Navigation ──
+  const handleNextRound = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      props.activeItemHandler(e, roundNum + 1);
+    },
+    [props, roundNum]
+  );
+
+  const handleSubmitRound = useCallback(
+    async (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (props.refetchFunc) await props.refetchFunc();
+    },
+    [props]
+  );
+
+  const toggleView = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setShowPerformances((prev) => !prev);
   }, []);
 
 
-
-  useEffect(() => {
-    let timer;
-    if (openSMS === true) {
-      timer = setTimeout(() => {
-        setOpenSMS(false);
-        setNegativeSMS(false);
-      }, 3000);
-    }
-    return () => clearTimeout(timer);
-  }, [assignNetShow, openSMS, negativeSMS]);
-
-  // ⛏️⛏️ SET LIST FOR WHO LEFT THE NET
-  const leftNet = (e, pId) => {
-    e.preventDefault();
-    setPerformances(performances.filter((p) => p._id !== pId));
-    setLeftedPerformance((prevState) => {
-      if (leftedPerformance) {
-        return [
-          ...leftedPerformance,
-          ...performances.filter((p) => p._id === pId),
-        ];
-      } else {
-        return [...performances.filter((p) => p._id === pId)];
-      }
-    });
-  };
-
-  const recoverLeftedPerformance = (e, pId) => {
-    e.preventDefault();
-    setPerformances((prevState) => [
-      ...prevState,
-      ...leftedPerformance.filter((p, i) => p._id === pId),
-    ]);
-    setLeftedPerformance((prevState) => {
-      return [...prevState.filter((p, i) => p._id !== pId)];
-    });
-  };
-
-  // ⛏️⛏️ ADD A PARTICIPANT
-  const handleSaveParticipant = (res) => {
-    try {
-      const new_performance = {
-        event: props.eventID,
-        participant: {
-          _id: res.participant._id,
-          firstname: res.participant.firstname,
-          lastname: res.participant.lastname,
-        },
-        _id: res.performance._id,
-      };
-      setPerformances([...performances, new_performance]);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const handleUpdateRound=async (e: React.SyntheticEvent)=>{
-    e.preventDefault();
-    if(props.refetchFunc) await props.refetchFunc();
-  }
-
-  // ⛏️⛏️ INITIALIZE TO NEW NET
-  const assignNetHandler = async () => {
-    setIsLoading(true);
-    try {
-      // http://localhost:4000/api/event/assign-initial-net/611c978ef047ea50e9798039
-      const requestOptions = {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ performances, leftedPerformance }),
-      };
-
-      const response = await fetch(
-        `${hostname}/api/net/assign-net/${props.eventID}/${roundNum}`,
-        requestOptions
-      );
-      console.log("Initialize net - ", response);
-      props.updateNets(true);
-    } catch (error) {
-      console.log(error);
-    }
-    setIsLoading(false);
-  };
-
-
-  const Assign = async () => {
-    const result = [];
-    console.log("Game Rule");
-    const { api, columnApi } = gridRef.current || {};
-    if (api == null || columnApi == null) {
-      return;
-    }
-    console.log("api: ", api.getModel().rowsToDisplay);
-    //access the Grid API
-    const data = api?.getModel()?.rowsToDisplay;
-    data.forEach((node) => {
-      const rowNode = node?.data;
-      const rowData = performances.find((one) => one?._id === rowNode?._id);
-      result.push(rowData);
-    });
-    setIsLoading(true);
-    try {
-      // http://localhost:4000/api/event/assign-initial-net/611c978ef047ea50e9798039
-      const requestOptions = {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ performances: result, leftedPerformance }),
-      };
-      const assignUrls = [
-        "pre-rank-assign-net",
-        "assign-net",
-        "twoU-twoD-assign-net",
-        "oneU-oneD-assign-net",
-        "oneU-oneD-assign-net",
-      ];
-      console.log(props.eventID);
-
-      const response = await fetch(
-        `${hostname}/api/net/${assignUrls[roundNum - 1]}/${props.eventID
-        }/${roundNum}`,
-        requestOptions
-      );
-      console.log("Random assign net - ", response);
-      props.updateNets(true);
-    } catch (error) {
-      console.log(error);
-    }
-    setIsLoading(false);
-  };
-
-  const packAssign = async () => {
-    setIsLoading(true);
-    try {
-      // http://localhost:4000/api/event/assign-initial-net/611c978ef047ea50e9798039
-
-      const requestOptions = {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ performances, leftedPerformance }),
-      };
-
-      const response = await fetch(
-        `${hostname}/api/net/pack-assign-net/${props.eventID}/${roundNum}`,
-        requestOptions
-      );
-
-      console.log("Pack assign net - ", response);
-      props.updateNets(true);
-    } catch (error) {
-      console.log(error);
-    }
-    setIsLoading(false);
-  };
-
-
-  const handleNextRound = async (e) => {
-    e.preventDefault();
-    try {
-      props.activeItemHandler(e, roundNum + 1);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const toggleGameParticipant = (e) => {
-    e.preventDefault();
-    setShowPerformances((prevState) => !prevState);
-  };
-
-  const showMessage = () => {
-    if (assignNetShow === false && openSMS === true) {
-      if (negativeSMS === true) {
-        return (
-          <div className="alert alert-danger">
-            You can't reassign once the score is inputed
-          </div>
-        );
-      } else {
-        return (
-          <div className="alert alert-success">
-            You can't reassign once the score is inputed
-          </div>
-        );
-      }
-    }
-    return null;
-  };
-  const columnDefs = [
-    { field: "_id", hide: true },
-    { field: "Name", width: 280 },
-    {
-      field: "Ranking",
-      cellRenderer: roundNum <= 1 && CustomCellRenderer,
-    },
-    { field: "Point" },
-    { field: "Point Diffential" },
-    {
-      field: "Action",
-      cellRenderer: (params) => {
-        return params.value;
-      },
-    },
-  ];
-  //drag event
-  const ondragend = (e) => {
-    console.log(e);
-  };
-
-  const processPerformanceData = (data) => {
-    const rowData: IProcessRow[] = [];
-    data.forEach((one, index) => {
-      const row: IProcessRow = {
-        _id: one._id,
-        Name: `${one.participant.firstname} ${one.participant.lastname}`,
-        Ranking: index + 1, //getRankingNumber(index, performances, roundNum),
-        Point: getTotalPointOfARound(one, roundNum)
-          ? getTotalPointOfARound(one, roundNum).toFixed(2)
-          : "",
-        "Point Diffential": getTDRound(one, roundNum)
-          ? Math.sign(getTDRound(one, roundNum)) === -1
-            ? getTDRound(one, roundNum).toFixed(2)
-            : getTDRound(one, roundNum).toFixed(2)
-          : "",
-        Action: (
-          <button className="btn btn-danger" onClick={(e) => leftNet(e, one._id)}>
-            Left
-          </button>
-        ),
-      };
-      rowData.push(row);
-    });
-
-    return rowData;
-  };
-
-  const assignBtnNames = [
-    "Assign",
-    "Assign",
-    "2 Up 2 Down",
-    "1 Up 1 Down",
-    "1 Up 1 Down",
-  ];
-
-
-
-  // ⛏️⛏️ THIS IS MAIN RETURN
+  // ── Render ──
   return (
     <div className="SingleRound">
       <div className="all-btns-message-modal">
@@ -361,130 +290,111 @@ function SingleRound(props) {
             <button
               className="btn btn-primary"
               disabled={!showPerformances}
-              onClick={(e) => {
-                Assign();
-              }}
+              onClick={assignNetByPreRank}
             >
-              {assignBtnNames[roundNum - 1]}
+              {ASSIGN_BUTTON_LABELS[roundNum] ?? "Assign"}
             </button>
           </div>
-
-          <div className="btn-group">
-            {showPerformances === true ? (
-              <button
-                onClick={toggleGameParticipant}
-                className="btn btn-primary"
-              >
-                Participants
-              </button>
-            ) : (
-              <button onClick={toggleGameParticipant} className="btn btn-light">
-                Participants
-              </button>
-            )}
-            {showPerformances === true ? (
-              <button onClick={toggleGameParticipant} className="btn btn-light">
-                Game
-              </button>
-            ) : (
-              <button
-                onClick={toggleGameParticipant}
-                className="btn btn-primary"
-              >
-                Game
-              </button>
-            )}
-          </div>
+          <ViewToggle showPerformances={showPerformances} onToggle={toggleView} />
         </div>
 
-        {showMessage()}
+        <StatusMessage visible={statusMessage.visible} isNegative={statusMessage.isNegative} />
 
-        <Modal show={assignNetShow} onHide={handleNetClose}>
-          <Modal.Header closeButton>
-            <Modal.Title>Report score</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>Did you report any score in this round?</Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={(e) => handleNetClose(e, false)}
-            >
-              Yes
-            </Button>
-            <Button variant="primary" onClick={(e) => handleNetClose(e, true)}>
-              No
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        <ScoreConfirmModal
+          show={isConfirmModalOpen}
+          onConfirm={handleConfirmModalClose}
+        />
       </div>
 
       {showPerformances ? (
-        <React.Fragment>
+        <>
           {isLoading ? (
             <Loader />
           ) : (
-            <React.Fragment>
+            <>
               <h2 className="h2">All players in the tournament</h2>
-              <div className="ag-theme-alpine" style={{ height: "600px" }}>
-                <AgGridReact
-                  ref={gridRef}
-                  columnDefs={columnDefs}
-                  rowDragManaged={true}
-                  animateRows={true}
-                  onRowDragEnd={ondragend}
-                  rowData={processPerformanceData(performances)}
-                  pagination={false}
-                />
+              <div className="table-responsive" style={{ height: "600px", overflow: "auto" }}>
+                <table className="table table-striped table-hover">
+                  <thead className="sticky-top bg-white">
+                    <tr>
+                      <th style={{ width: "50px" }}>#</th>
+                      <th style={{ width: "280px" }}>Name</th>
+                      <th>Ranking</th>
+                      <th>Point</th>
+                      <th>Point Differential</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderedPerformances.map((performance, index) => (
+                      <PerformanceTableRow
+                        key={performance._id}
+                        performance={performance}
+                        index={index}
+                        roundNum={roundNum}
+                        isDragging={draggedItem?.id === performance._id}
+                        orderedPerformances={orderedPerformances}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleDragOver}
+                        onDrop={handleDrop}
+                        onDragEnd={handleDragEnd}
+                        onLeft={handleLeftPerformance}
+                        onRankChange={handleRankInputChange}
+                      />
+                    ))}
+                  </tbody>
+                </table>
               </div>
               <br />
               <br />
-            </React.Fragment>
+            </>
           )}
-          {showLiftedPefrormance(
-            leftedPerformance,
-            roundNum,
-            recoverLeftedPerformance,
-            true
-          )}
+          {showLiftedPefrormance(leftedPerformances, roundNum, handleRecoverPerformance, true)}
           <br />
           <br />
           <AddParticipant
             roundNum={roundNum}
-            eventID={props.eventID}
-            handleSaveParticipant={handleSaveParticipant}
+            eventID={eventID}
+            handleSaveParticipant={handleSaveNewParticipant}
           />
-        </React.Fragment>
+        </>
       ) : (
-        <React.Fragment>
+        <>
           {isLoading ? (
             <Loader />
           ) : (
             <div className="nets-table-wrapper">
-              <NetOfARound game={props.game} nets={nets} roundNum={roundNum} rankPerformanceInNet={rankPerformanceInNet} 
-              token={token} eventID={props.eventID} refetchFunc={props.refetchFunc} />
+              <NetOfARound
+                game={props.game}
+                nets={nets}
+                roundNum={roundNum}
+                rankPerformanceInNet={rankPerformanceInNet}
+                token={getAuthToken()}
+                eventID={eventID}
+                refetchFunc={props.refetchFunc}
+              />
             </div>
           )}
           {roundNum <= 4 && (
             <>
-              {props.incomepleteMessage !== null && (
-                <div className="alert alert-danger mt-3">
-                  {props.incomepleteMessage}
-                </div>
+              {props.incomepleteMessage && (
+                <div className="alert alert-danger mt-3">{props.incomepleteMessage}</div>
               )}
               <div className="text-md-center">
                 <button onClick={handleNextRound} type="button" className="btn btn-warning">
                   Next Round
                 </button>
-                <button onClick={handleUpdateRound} type="button" className="btn btn-success">
+                <button onClick={handleSubmitRound} type="button" className="btn btn-success">
                   Submit
                 </button>
               </div>
             </>
           )}
           <div className="show table">
-            {showLiftedPefrormance(leftedPerformance, roundNum, null, false)}
+            {/* {showLiftedPefrormance(leftedPerformances, roundNum, null, false)} */}
+            <ShowLiftedPerformances leftedPerformances={leftedPerformances} onRecover={handleRecoverPerformance} roundNum={roundNum} />
           </div>
-        </React.Fragment>
+        </>
       )}
       <br />
     </div>

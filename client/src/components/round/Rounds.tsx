@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import SingleRound from './SingleRound';
 import { hostname } from '../../utils/global';
 import { checkRoundCompleted } from '../../utils/helpers';
@@ -6,288 +6,222 @@ import Loader from '../elements/Loader';
 import "../../style/Rounds.css";
 import { IPerformance, IRound } from '../../types';
 
-interface IRoundsProps{
+// Sub-component for round navigation tabs
+interface RoundTabProps {
+    roundNumber: number;
+    currentRound: number;
+    onClick: (e: React.MouseEvent, round: number) => void;
+}
+
+const RoundTab: React.FC<RoundTabProps> = ({ roundNumber, currentRound, onClick }) => {
+    const isActive = currentRound === roundNumber;
+    return (
+        <a 
+            className={isActive ? "nav-link active" : "nav-link"} 
+            onClick={(e) => onClick(e, roundNumber)}
+            href="#"
+            role="tab"
+        >
+            Round {roundNumber}
+        </a>
+    );
+};
+
+// Sub-component for error message display
+interface ErrorMessageProps {
+    message: string | null;
+}
+
+const ErrorMessage: React.FC<ErrorMessageProps> = ({ message }) => {
+    if (!message) return null;
+    return <div className="alert alert-danger mt-2 mb-0">{message}</div>;
+};
+
+// Constants for game numbers per round
+const GAME_NUMBERS_BY_ROUND: Record<number, number[]> = {
+    1: [1, 2, 3],
+    2: [4, 5, 6],
+    3: [7, 8, 9],
+    4: [10, 11, 12],
+    5: [13, 14, 15],
+    // 6: [16, 17, 18]
+};
+
+interface IRoundsProps {
     eventID: string;
 }
 
-const Rounds = ({eventID}: IRoundsProps) => {
-    const [roundNum, setRoundNum] = useState<number>(1);
-    const [incomepleteMessage, setIncomepleteMessage] = useState<string | null>(null);
-    const [initialize, setInitialize] = useState<boolean>(false);
-    const [round, setRounds] = useState<IRound[]>([]);
-    const [leftRound, setLeftRound] = useState([]);
+const Rounds = ({ eventID }: IRoundsProps) => {
+    const [currentRound, setCurrentRound] = useState<number>(1);
+    const [incompleteMessage, setIncompleteMessage] = useState<string | null>(null);
+    const [isInitialRound, setIsInitialRound] = useState<boolean>(false);
+    const [selectedRoundData, setSelectedRoundData] = useState<IRound | null>(null);
+    const [leftRoundParticipants, setLeftRoundParticipants] = useState<IPerformance[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [performances, setPerformances] = useState<IPerformance[]>([]);
-    const [rankPerformanceInNet, setRankPerformanceInNet] = useState([]);
-    const [incompleteErr, setIncompleteErr] = useState([]);
+    const [allParticipants, setAllParticipants] = useState<IPerformance[]>([]);
+    const [rankedParticipantsInNets, setRankedParticipantsInNets] = useState([]);
+    const [incompleteNets, setIncompleteNets] = useState<number[]>([]);
 
-    const activeItemHandler = (e, item) => {
+    // Format incomplete nets numbers into readable message
+    const formatIncompleteNetsMessage = useCallback((netNumbers: number[]): string => {
+        if (netNumbers.length === 0) return '';
+        return netNumbers.join(', ');
+    }, []);
+
+    // Handle round navigation
+    const handleRoundChange = useCallback(async (e: React.MouseEvent, targetRound: number) => {
         e.preventDefault();
+        
 
-
-        // CHECK ALL GAMES IS BEEN COMPLETED 
-        const { complete, incomplete } = checkRoundCompleted(roundNum, round.nets);
-
-        if (item <= 5) {
-            if (item > roundNum) {
-                if (incomplete.length > 0) {
-                    // CAN'T GO TO NEXT ROUND 
-                    setIncompleteErr(incomplete);
-                } else {
-                    // SUCCESS - CAN GO TO NEXT ROUND 
-                    setRoundNum(item);
-                    findRound(item);
-                }
-            } else {
-                setRoundNum(item);
-                findRound(item);
+        // Validate if we can move to next round
+        if (targetRound <= 5 && targetRound > currentRound && selectedRoundData?.nets) {
+            const { complete, incomplete } = checkRoundCompleted(currentRound, selectedRoundData.nets);
+            
+            if (incomplete.length > 0) {
+                setIncompleteNets(incomplete);
+                return;
             }
         }
-    }
 
+        // Navigate to the target round
+        setCurrentRound(targetRound);
+        await fetchRoundData(targetRound);
+    }, [currentRound, selectedRoundData]);
 
-    const incompleteNetNoSMS = (netNo) => {
-        // console.log(netNo);
-        let sms = '';
-        netNo.forEach(nn => sms = sms + " " + nn + ", ");
-        return sms;
-    }
-
-
-
-
-
-
-
-
-
-    // ⛏️⛏️ GET ALL NETS FROM A ROUND ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖
-    const findRound = async (r) => {
-
+    // Fetch round data from API
+    const fetchRoundData = useCallback(async (roundNumber: number) => {
         try {
-            const requestOptions = {
-                method: 'GET',
-                headers: { "Content-Type": 'application/json' },
-            };
             setIsLoading(true);
-            const response = await fetch(`${hostname}/api/round/get-single-round/${eventID}/${r}`, requestOptions);
-            console.log("Get nets from round - ", response);
-            const text = await response.text();
-            const jsonRes = await JSON.parse(text);
-            if (jsonRes.performances.length > 0) {
-                setPerformances(jsonRes.performances);
+            
+            const response = await fetch(
+                `${hostname}/api/round/get-single-round/${eventID}/${roundNumber}`,
+                { method: 'GET', headers: { "Content-Type": "application/json" } }
+            );
+        
+            const responseData = await response.json();
+            
+
+            // Update participants
+            if (responseData.performances?.length > 0) {
+                setAllParticipants(responseData.performances);
             }
-            if (jsonRes.leftRound && jsonRes.leftRound.length > 0) {
-                setLeftRound([...jsonRes.leftRound]);
+
+            // Update left round participants
+            if (responseData.leftRound?.length > 0) {
+                setLeftRoundParticipants([...responseData.leftRound]);
             }
-            // CHECK FOR INITIAL NET 
-            if (jsonRes.findRound || jsonRes.findRound !== null) {
-                setRounds(jsonRes.findRound);
-                if (jsonRes.findRound.nets || jsonRes.findRound.nets.length > 0) {
-                    setRankPerformanceInNet(jsonRes.rankNets);
-                    setInitialize(false);
-                } else {
-                    setInitialize(true);
-                }
+
+            // Update round data
+            if (responseData.findRound) {
+                setSelectedRoundData(responseData.findRound);
+                setRankedParticipantsInNets(responseData.rankNets || []);
+                setIsInitialRound(!responseData.findRound.nets?.length);
             } else {
-                setRounds([]);
-                setInitialize(true);
+                setSelectedRoundData(null);
+                setIsInitialRound(true);
             }
 
         } catch (error) {
-            console.log(error);
-        }finally{
+            console.error(`Error fetching round ${roundNumber}:`, error);
+        } finally {
             setIsLoading(false);
         }
+    }, [eventID]);
 
-    }
+    // Refetch current round data
+    const refetchCurrentRound = useCallback(async () => {
+        await fetchRoundData(currentRound);
+    }, [currentRound, fetchRoundData]);
 
-
-
-    const refetchFunc=async ()=>{
-        await findRound(roundNum);
-    }
-
-
-    useEffect(() => {
-        findRound(roundNum);
-    }, []);
-
-
-
-    useEffect(() => {
-        // ERROR MESSAGE WILL DISAPPAIR AFTER 3 SECOND 
-        let timer;
-        if (incompleteErr.length > 0) {
-            setIncomepleteMessage(`Please complete all games in net ${incompleteNetNoSMS(incompleteErr)} to go to next round`);
-            timer = setTimeout(() => {
-                setIncompleteErr([]);
-                setIncomepleteMessage(null);
-            }, 3000);
+    // Handle net updates
+    const handleNetUpdate = useCallback((shouldUpdate: boolean) => {
+        if (shouldUpdate) {
+            fetchRoundData(currentRound);
         }
+    }, [currentRound, fetchRoundData]);
+
+    // Effect for initial data fetch
+    useEffect(() => {
+        fetchRoundData(1);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Effect for handling incomplete nets error message
+    useEffect(() => {
+        if (incompleteNets.length === 0) {
+            setIncompleteMessage(null);
+            return;
+        }
+
+        const formattedNets = formatIncompleteNetsMessage(incompleteNets);
+        setIncompleteMessage(
+            `Please complete all games in net ${formattedNets} to go to next round`
+        );
+
+        const timer = setTimeout(() => {
+            setIncompleteNets([]);
+            setIncompleteMessage(null);
+        }, 3000);
+
         return () => clearTimeout(timer);
-    }, [incompleteErr]);
+    }, [incompleteNets, formatIncompleteNetsMessage]);
 
+    // Memoized game numbers for current round
+    const currentRoundGames = useMemo(
+        () => GAME_NUMBERS_BY_ROUND[currentRound] || [],
+        [currentRound]
+    );
 
-
-    const updateFindNets = (update) => {
-        if (update) findRound(roundNum);
-    }
-
-
-    /* ⛏️⛏️ SHOW COMPONENT WITH CONDITIONS ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖  */
-    const showTabContent = () => {
-        switch (roundNum) {
-            case 1:
-                if (isLoading) {
-                    return <Loader />;
-                } else {
-                    return (<div className="tab-pane fade show active" >
-                        <SingleRound
-                            incomepleteMessage={incomepleteMessage}
-                            initialize={initialize}
-                            activeItemHandler={activeItemHandler}
-                            performances={performances}
-                            round={round}
-                            rankPerformanceInNet={rankPerformanceInNet}
-                            roundNum={roundNum}
-                            updateNets={updateFindNets}
-                            leftRound={leftRound}
-                            game={[1, 2, 3]}
-                            refetchFunc={refetchFunc}
-                            eventID={eventID} />
-                    </div>);
-                }
-            case 2:
-                if (isLoading) {
-                    return <Loader />;
-                } else {
-
-                    return (<div className="tab-pane fade show active" >
-                        <SingleRound
-                            incomepleteMessage={incomepleteMessage}
-                            initialize={initialize}
-                            activeItemHandler={activeItemHandler}
-                            performances={performances}
-                            round={round}
-                            rankPerformanceInNet={rankPerformanceInNet}
-                            roundNum={roundNum}
-                            updateNets={updateFindNets}
-                            leftRound={leftRound}
-                            game={[4, 5, 6]}
-                            refetchFunc={refetchFunc}
-                            eventID={eventID} />
-                    </div>);
-                }
-            case 3:
-                if (isLoading) {
-                    return <Loader />;
-                } else {
-                    return (<div className="tab-pane fade show active" >
-                        <SingleRound
-                            incomepleteMessage={incomepleteMessage}
-                            initialize={initialize}
-                            activeItemHandler={activeItemHandler}
-                            performances={performances}
-                            round={round}
-                            rankPerformanceInNet={rankPerformanceInNet}
-                            roundNum={roundNum}
-                            updateNets={updateFindNets}
-                            leftRound={leftRound}
-                            game={[7, 8, 9]}
-                            refetchFunc={refetchFunc}
-                            eventID={eventID} />
-                    </div>);
-                }
-            case 4:
-                if (isLoading) {
-                    return <Loader />;
-                } else {
-                    return (<div className="tab-pane fade show active" >
-                        <SingleRound
-                            incomepleteMessage={incomepleteMessage}
-                            initialize={initialize}
-                            activeItemHandler={activeItemHandler}
-                            performances={performances}
-                            round={round}
-                            rankPerformanceInNet={rankPerformanceInNet}
-                            roundNum={roundNum}
-                            updateNets={updateFindNets}
-                            leftRound={leftRound}
-                            game={[10, 11, 12]}
-                            refetchFunc={refetchFunc}
-                            eventID={eventID} />
-                    </div>);
-                }
-            case 5:
-                if (isLoading) {
-                    return <Loader />;
-                } else {
-                    return (<div className="tab-pane fade show active" >
-                        <SingleRound
-                            initialize={initialize}
-                            activeItemHandler={activeItemHandler}
-                            performances={performances}
-                            round={round}
-                            rankPerformanceInNet={rankPerformanceInNet}
-                            roundNum={roundNum}
-                            updateNets={updateFindNets}
-                            leftRound={leftRound}
-                            game={[13, 14, 15]}
-                            refetchFunc={refetchFunc}
-                            eventID={eventID} />
-                    </div>);
-                }
-                case 6:
-                if (isLoading) {
-                    return <Loader />;
-                } else {
-                    return (<div className="tab-pane fade show active" >
-                        <SingleRound
-                            initialize={initialize}
-                            activeItemHandler={activeItemHandler}
-                            performances={performances}
-                            round={round}
-                            rankPerformanceInNet={rankPerformanceInNet}
-                            roundNum={roundNum}
-                            updateNets={updateFindNets}
-                            leftRound={leftRound}
-                            game={[16, 17, 18]}
-                            eventID={eventID} />
-                    </div>);
-                }
-            default:
-                return (<div className="tab-pane fade show active" >Event overview</div>);
+    // Render single round component with props
+    const renderSingleRound = () => {
+        if (isLoading) {
+            return <Loader />;
         }
-    }
+
+        // Don't render if no round data for rounds beyond 5
+        if (currentRound > 5) {
+            return <div className="tab-pane fade show active">Event overview</div>;
+        }
+
+        return (
+            <div className="tab-pane fade show active">
+                <SingleRound
+                    incomepleteMessage={incompleteMessage}
+                    initialize={isInitialRound}
+                    activeItemHandler={handleRoundChange}
+                    performances={allParticipants}
+                    round={selectedRoundData}
+                    rankPerformanceInNet={rankedParticipantsInNets}
+                    roundNum={currentRound}
+                    updateNets={handleNetUpdate}
+                    leftRound={leftRoundParticipants}
+                    game={currentRoundGames}
+                    refetchFunc={refetchCurrentRound}
+                    eventID={eventID}
+                />
+            </div>
+        );
+    };
+
     return (
         <div className="Rounds">
             <nav className="nav nav-pills bg-dark">
-
-                <a className={roundNum === 1 ? "nav-link active" : "nav-link"} onClick={e => activeItemHandler(e, 1)}>Round 1</a>
-                <a className={roundNum === 2 ? "nav-link active" : "nav-link"} onClick={e => activeItemHandler(e, 2)}>Round 2</a>
-                <a className={roundNum === 3 ? "nav-link active" : "nav-link"} onClick={e => activeItemHandler(e, 3)}>Round 3</a>
-                <a className={roundNum === 4 ? "nav-link active" : "nav-link"} onClick={e => activeItemHandler(e, 4)}>Round 4</a>
-                <a className={roundNum === 5 ? "nav-link active" : "nav-link"} onClick={e => activeItemHandler(e, 5)}>Round 5</a>
-
+                {[1, 2, 3, 4, 5].map(round => (
+                    <RoundTab
+                        key={round}
+                        roundNumber={round}
+                        currentRound={currentRound}
+                        onClick={handleRoundChange}
+                    />
+                ))}
             </nav>
-            <div className="tab-content" >
-                {showTabContent()}
+            
+            <ErrorMessage message={incompleteMessage} />
+            
+            <div className="tab-content">
+                {renderSingleRound()}
             </div>
         </div>
-    )
-}
-
+    );
+};
 
 export default Rounds;
-
-
-
-
-
-
-
-
-
-
-

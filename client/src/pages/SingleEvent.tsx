@@ -6,9 +6,9 @@ import Rounds from '../components/round/Rounds'
 import Score from "./Score";
 import ExportField from '../components/export/ExportField';
 import Loader from '../components/elements/Loader';
-import { formattedDate } from '../utils/helpers';
 import { IParticipant } from '../types';
 import { getSingleEvent } from '../utils/handleRequests/event';
+import { formattedDate } from '../utils/helpers';
 
 interface ISingleEventProps extends WithRouterProps {
     params: {

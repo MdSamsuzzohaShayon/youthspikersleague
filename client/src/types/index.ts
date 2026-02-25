@@ -16,6 +16,7 @@ export interface IParticipant {
 
 export interface IPerformance {
     _id: string;
+    event: string;
     pre_rank: number;
     participant: IParticipant;
 }
