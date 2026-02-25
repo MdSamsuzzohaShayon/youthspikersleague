@@ -2,17 +2,17 @@
 
 **Live:** [Youth Spikers League](https://youthspikersleague.com/)
 
-A **full-stack Spikeball tournament management system** built with the MERN stack. It supports **real-time ranking, role-based access, and automated score updates**.
+A full-stack Spikeball tournament management system built with the MERN stack, featuring real-time rankings, role-based access, and automated score updates. I developed this application in 2021, at a time when AI tools like ChatGPT weren’t available, making it a fully handcrafted, custom solution.
 
 ---
 
 ## 📂 Folder Structure
 
 ```
-mern-spikeball-tournament/
+youthspikersleague/
 │
-├── apache/                       # Apache configuration files
-├── auto_deploy.sh                 # Deployment script
+├── apache/                        # Apache configuration files
+├── auto_deploy.sh                 # Automated Deployment script
 ├── client/                        # Frontend (React + Vite)
 │   ├── public/                    # Static assets
 │   ├── src/                       # React components, pages, utils
@@ -43,13 +43,13 @@ mern-spikeball-tournament/
 * **Frontend:** React.js, Vite
 * **Backend:** Express.js, REST API
 * **Database:** MongoDB
-* **Authentication:** Session-based, role management
+* **Authentication:** JWT-based, role management
 
 ---
 
 ## 🚀 Features
 
-* Session and **role-based authentication**
+* JWT and **role-based authentication**
 * Super admin can **create, update, delete staff accounts**
 * Staff can manage events and player data
 * CRUD operations for tournaments and matches
@@ -63,8 +63,8 @@ mern-spikeball-tournament/
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/your-username/mern-spikeball-tournament.git
-cd mern-spikeball-tournament
+git clone https://github.com/mdsamsuzzohashayon/youthspikersleague.git
+cd youthspikersleague
 ```
 
 ### 2. Backend Setup
