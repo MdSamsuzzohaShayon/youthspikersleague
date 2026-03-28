@@ -1,0 +1,21 @@
+Hi, this is one of the projects I built for my client — the Youth Spikers League tournament management system.
+I developed this full-stack web application using the MERN stack — MongoDB, Express, React, and Node.js — 
+completely from scratch, before AI tools like ChatGPT were available.
+
+
+Let me quickly walk you through it.
+
+This is the public homepage, where you can see all the available events. It’s clean, simple, and easy to navigate.
+When we click on an event, you can see the full match structure. In this case, there are five rounds, 
+and after each round, player rankings are automatically updated based on their points.
+
+Below the rankings, you can see the matchups — which team is playing against whom, and who earned the points. 
+Everything updates dynamically, giving a smooth and real-time experience.
+
+Now, if we switch to the admin panel, this is where the real power is. From here, we can manage events, players,
+staff, automate team assignments, control rounds, and track scores — all from one intuitive dashboard.
+
+
+This project demonstrates my ability to build complex, interactive web applications, 
+handle dynamic tournament logic, and deliver a seamless user 
+experience from both public and admin perspectives.

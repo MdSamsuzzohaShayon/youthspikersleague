@@ -24,76 +24,77 @@ router.post('/register',
     // password must be at least 5 chars long
     check('password', "Password should be more than 5 character long").isLength({ min: 5 }),
     // check('role', "You must select a role").notEmpty(),
-    (req, res, next) => {
+    async (req, res, next) => {
         const allErr = new Array();
-        if (req.userRole === SUPER) {
-            // console.log(req.body);
-            const { email, username, password } = req.body;
-            const valErrs = validationResult(req);
-            if (!valErrs.isEmpty()) {
-                const errArr = allErr.concat(valErrs.errors);
-                return res.status(400).json({ errors: errArr });
-            }
-            Admin.findOne({ email }, (err, emailResult) => {
-                if (err) throw err;
-                if (emailResult) {
-                    allErr.push({ msg: "Email already exist" });
-                    return res.status(400).json({ errors: allErr });
-                } else {
-                    // SAVE ADMIN 
-                    bcrypt.genSalt(10, (saltErr, salt) => {
-                        bcrypt.hash(password, salt, (hashErr, hash) => {
-                            // const newAdmin = new Admin({ name: username, email, role, password: hash });
-                            // newAdmin.save();
-                            // console.log(username, email, role, password, hash);
-                            Admin.create({ name: username, email, role: GENERAL, password: hash }, (err, docs) => {
-                                if (err) throw err;
-                                return res.status(201).json({ admin: docs });
-                            })
-                        });
-                    });
-                }
-            });
-        } else {
+
+        if (req?.userRole !== SUPER) {
             allErr.push({ msg: "You are not a super user" });
             return res.status(400).json({ errors: allErr });
         }
+
+
+        const { email, username, password } = req.body;
+        const valErrs = validationResult(req);
+        if (!valErrs.isEmpty()) {
+            const errArr = allErr.concat(valErrs.errors);
+            return res.status(400).json({ errors: errArr });
+        }
+        // 1️⃣ Check if email already exists
+        const staffExist = await Admin.findOne({ email });
+        if (staffExist) {
+            allErr.push({ msg: "Email already exists" });
+            return res.status(400).json({ errors: allErr });
+        }
+
+        // 2️⃣ Generate salt and hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // 3️⃣ Save admin to DB
+        const newAdmin = await Admin.create({
+            name: username,
+            email,
+            role: req?.userRole || GENERAL,
+            password: hashedPassword,
+        });
+
+        return res.status(201).json({ admin: newAdmin });
     });
 
 /* ⛏️⛏️ LOGIN USERS ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖  */
-router.post('/login', check('email').notEmpty(), check('password').notEmpty(), async (req,res)=>{
+router.post('/login', check('email').notEmpty(), check('password').notEmpty(), async (req, res) => {
     const errors = validationResult(req);
-  // https://github.com/MdSamsuzzohaShayon/mern-spikeball-tournament/blob/master/server/routes/admin.js
-  if (!errors.isEmpty()) {
-    return res.status(406).json({ error: JSON.stringify(errors.array()) });
-  }
-
-  const { email, password } = req.body;
-
-  try {
-    const userExist = await Admin.findOne({  email  });
-    if (!userExist) return res.status(404).json({ msg: "Admin doesn't exist" });
-
-    const isPasswordCorrect = await bcrypt.compare(password, userExist.password);
-    if (!isPasswordCorrect) {
-      return res.status(406).json({ msg: 'Invalid credentials' });
+    // https://github.com/MdSamsuzzohaShayon/mern-spikeball-tournament/blob/master/server/routes/admin.js
+    if (!errors.isEmpty()) {
+        return res.status(406).json({ error: JSON.stringify(errors.array()) });
     }
 
-    const userDetailResponse = {
-        _id: userExist._id,
-      email: userExist.email,
-      role: userExist.role,
-      name: userExist.name,
-    };
-    const accessToken = jwt.sign(userDetailResponse, process.env.JWT_SECRET, {
-      expiresIn: '1h',
-    });
+    const { email, password } = req.body;
 
-    return res.status(200).json({ msg: 'Logged in successfully', accessToken, user: userDetailResponse });
-  } catch (err) {
-    console.log(err);
-    return res.status(500).json({ msg: 'Something went wrong', err });
-  }
+    try {
+        const userExist = await Admin.findOne({ email });
+        if (!userExist) return res.status(404).json({ msg: "Admin doesn't exist" });
+
+        const isPasswordCorrect = await bcrypt.compare(password, userExist.password);
+        if (!isPasswordCorrect) {
+            return res.status(406).json({ msg: 'Invalid credentials' });
+        }
+
+        const userDetailResponse = {
+            _id: userExist._id,
+            email: userExist.email,
+            role: userExist.role,
+            name: userExist.name,
+        };
+        const accessToken = jwt.sign(userDetailResponse, process.env.JWT_SECRET, {
+            expiresIn: '1h',
+        });
+
+        return res.status(200).json({ msg: 'Logged in successfully', accessToken, user: userDetailResponse });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ msg: 'Something went wrong', err });
+    }
 });
 
 
@@ -138,7 +139,7 @@ router.delete("/delete/:adminID", ensureAuth, async (req, res, next) => {
 /* ⛏️⛏️ LOGOUT USERS ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖  */
 router.get('/logout', ensureAuth, (req, res) => {
     req.session.destroy(null);
-    req.logout(function(err){});
+    req.logout(function (err) { });
     // console.log(req.user);
     res.status(200).json({ user: null });
 });
