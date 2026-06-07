@@ -3,34 +3,23 @@ const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
 
 module.exports = (passport) => {
-    // console.log("Pasport js ");
-
     passport.use(new LocalStrategy(
         {
             usernameField: 'email',
             passwordField: 'password'
         },
-        function (email, password, done) {
-            Admin.findOne({ email }, function (err, admin) {
-                // console.log(admin);
-                if (err) { return done(err); }
-                if (!admin) {
-                    return done(null, false, { message: 'Incorrect username.' });
-                }
-                // if (!user.validPassword(password)) {
-                //     return done(null, false, { message: 'Incorrect password.' });
-                // }
-                // console.log(password);
-                // console.log(admin.password);
-                bcrypt.compare(password, admin.password, function (err, isMatch) {
-                    // console.log("Password match - " ,isMatch);
-                    if (isMatch) {
-                        return done(null, admin);
-                    } else {
-                        return done(null, false);
-                    }
-                });
-            });
+        async function (email, password, done) {
+
+            const adminExist = await Admin.findOne({ email });
+            if (!adminExist) {
+                return done(null, false, { message: 'Incorrect username.' });
+            }
+            const passwordMatched = await bcrypt.compare(password, admin.password);
+            if (passwordMatched) {
+                return done(null, admin);
+            }
+            return done(null, false);
+
         }
     ));
     passport.serializeUser(function (user, done) {

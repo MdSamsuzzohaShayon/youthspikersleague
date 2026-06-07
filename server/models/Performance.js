@@ -47,17 +47,13 @@ const performanceSchema = new Schema({
         max: 15,
         min: 1
     },
+    // Not sure what this is
     pre_rank: {
         type: Number,
         default: 0,
-    }
-    // nested: {
-    //     stuff: {
-    //         type: String,
-    //         lowercase: true,
-    //         trim: true
-    //     }
-    // },
+    },
+    rank: Number
+    
 });
 
 

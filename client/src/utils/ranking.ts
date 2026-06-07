@@ -114,8 +114,6 @@ export const rankingRound1 = (a, b) => {
     let pointA = 0, pointB = 0;
     pointA = addR1(a);
     pointB = addR1(b);
-    // console.log(pointA);
-    // console.log(pointB);
     if (pointA > pointB) {
         return -1;
     }
@@ -150,8 +148,6 @@ export const rankingRound2 = (a, b) => {
     let pointA = 0, pointB = 0;
     pointA = addR2(a);
     pointB = addR2(b);
-    // console.log(pointA);
-    // console.log(pointB);
     if (pointA > pointB) {
         return -1;
     }
@@ -239,36 +235,6 @@ export const rankingRound4 = (a, b) => {
 
 
 
-// RANK SEQUENTIALLY 
-// module.exports.rankingRound5 = (a, b) => {
-
-//     let pointA = 0, pointB = 0;
-//     pointA = addR1(a) + addR2(a) + addR3(a) + addR4(a) + addR5(a);
-//     pointB = addR1(b) + addR2(b) + addR3(b) + addR4(b) + addR5(b);
-//     if (pointA > pointB) {
-//         return -1;
-//     }
-//     if (pointB > pointA) {
-//         return 1;
-//     }
-//     if (pointA == pointB) {
-//         let pdta = 0, pdtb = 0;
-//         pdta = pdtR1(a) + pdtR2(a) + pdtR3(a) + pdtR4(a) + pdtR5(a);
-//         pdtb = pdtR1(b) + pdtR2(b) + pdtR3(b) + pdtR4(b) + pdtR5(b);
-//         if (pdta > pdtb) {
-//             return -1;
-//         }
-//         if (pdta < pdtb) {
-//             return 1;
-//         }
-//         return 0;
-
-//     }
-//     return 0;
-// }
-
-
-
 export const rankingRound5 = (a, b) => {
 
     let pointA = 0, pointB = 0;
@@ -335,9 +301,7 @@ export const netRanking = (rankPerformanceInNet, roundNum) => {
     for (let i = 0; i < rankPerformanceInNet.length; i++) {
         if (roundNum === 1) {
             netRank.push(rankPerformanceInNet[i].performance.sort(rankingRound1));
-            // console.log("Sorted - ", roundNum);
         } else if (roundNum === 2) {
-            // console.log("Sorted - ", roundNum);
             netRank.push(rankPerformanceInNet[i].performance.sort(rankingRound2));
         } else if (roundNum === 3) {
             netRank.push(rankPerformanceInNet[i].performance.sort(rankingRound3));

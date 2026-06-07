@@ -1,6 +1,4 @@
-
-
-
+import { IPerformance } from "../types";
 
 export const totalPoint = (performance) => {
     let point = 0;
@@ -14,9 +12,8 @@ export const totalPoint = (performance) => {
 }
 
 
-export const roundwiseTotalPoint = (performance, game1, game2, game3) => {
+export const roundwiseTotalPoint = (performance: IPerformance, game1: string, game2: string, game3: string): number => {
     let point = 0;
-    // console.log("performance, ", performance);
     if(performance){
         if (performance[game1] && performance[game1] !== "undefined") point += performance[game1].point;
         if (performance[game2] && performance[game2] !== "undefined") point += performance[game2].point;
@@ -30,13 +27,7 @@ export const roundwiseTotalPoint = (performance, game1, game2, game3) => {
 
 
 export const round1Total = (performance) => {
-    // console.log(performance);
-    // net: "612ba44101aa740bfefc8ded"
-    // participant: { _id: "612ba43701aa740bfefc8dcc", firstname: "Jaren", lastname: "Haggard" }
-    // round1:
-    // point: 1
-    // pointDeferential: "12-11"
-    // _id: "612ce5111666e55142b7e83a"
+    
     let point = 0;
     if (performance.game1) point += performance.game1.point;
     if (performance.game2) point += performance.game2.point;

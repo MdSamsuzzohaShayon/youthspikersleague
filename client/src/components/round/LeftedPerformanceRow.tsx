@@ -1,6 +1,6 @@
 import React from "react";
 import { IPerformance } from "../../types";
-import { getTDRound, getTotalPointOfARound } from "../../utils/tptd";
+import { getTDRound, getTotalPointOfARound } from "../../utils/totalPointAndDiffrential";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

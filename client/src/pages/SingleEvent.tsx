@@ -63,7 +63,7 @@ class SingleEvent extends Component<ISingleEventProps, ISingleEventState> {
                 if(fetchedEvent)this.setState({currentEvent: fetchedEvent});
             })()
             this.setState({ currentEventID: this.props.params.id });
-            document.title = "Spikers Scramble - " + this.state.currentEvent.title;
+            // document.title = "Spikers Scramble - " + this.state.currentEvent.title;
         }
 
     }
@@ -135,7 +135,7 @@ class SingleEvent extends Component<ISingleEventProps, ISingleEventState> {
                 if (this.state.isLoading) {
                     return (<Loader />);
                 } else {
-                    return (<div className="tab-pane fade show active" ><Rounds eventID={this.state.currentEventID} /></div>);
+                    return (<div className="tab-pane fade show active" ><Rounds eventName={this.state.currentEvent.title} eventID={this.state.currentEventID} /></div>);
                 }
             case "score":
                 if (this.state.isLoading) {

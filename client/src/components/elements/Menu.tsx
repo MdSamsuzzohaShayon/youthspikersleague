@@ -1,11 +1,9 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { hostname } from '../../utils/global';
 import { Navbar, Nav, Container } from 'react-bootstrap';
-import logo from "./icon/logo.png";
 
 
-const Menu = (props) => {
+
+const Menu = () => {
     let navigate = useNavigate();
 
     /* ⛏️⛏️ LOGOUT EVENT*/
@@ -16,7 +14,7 @@ const Menu = (props) => {
             localStorage.removeItem("user");
             navigate("/");
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     }
     return (

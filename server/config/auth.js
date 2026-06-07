@@ -16,7 +16,7 @@ module.exports = {
           req.userRole = decodedToken.role;
           next();
         } catch (error) {
-          console.log(error);
+          console.error(error);
           if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ msg: 'Unauthenticated' });
           }

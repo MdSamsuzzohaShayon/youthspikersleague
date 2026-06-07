@@ -28,12 +28,9 @@ const ExportField = (props) => {
                 headers: { "Content-Type": 'application/json',  "Authorization": `Bearer ${token}` },
                 body: JSON.stringify({ filename })
             };
-            // console.log(props.eventID);
 
             const response = await fetch(`${hostname}/api/performance/exports/${props.eventID}`, requestOptions);
-            console.log("Exported - ", response);
             const blob = await response.blob();
-            console.log("blob - ", blob);
             // Create blob link to download
             const url = window.URL.createObjectURL(
                 new Blob([blob]),
@@ -55,7 +52,7 @@ const ExportField = (props) => {
             link.parentNode.removeChild(link);
             setIsLoading(false);
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     }
 

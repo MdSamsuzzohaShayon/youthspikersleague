@@ -6,6 +6,7 @@ import '../style/Admin.css';
 import withNavigate from '../HOC/withNavigate';
 import { Navigate, Outlet } from 'react-router-dom';
 import Menu from '../components/elements/Menu';
+import Footer from '../components/elements/Footer';
 
 
 
@@ -16,9 +17,10 @@ class AdminRoot extends Component {
     render() {
         return (<div className="Admin">
             <Menu />
-            <div className="container">
+            <div className="container min-vh-100">
                <Outlet />
             </div>
+            <Footer />
         </div>
         );
     }

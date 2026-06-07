@@ -8,7 +8,6 @@ const { findRound } = require('../utils/helpers');
 
 
 const router = express.Router();
-// arr[Math.floor(Math.random() * arr.length)];
 
 
 
@@ -23,6 +22,8 @@ router.get('/get-single-round/:eventID/:roundNum', async (req, res, next) => {
         let performances = [];
         let leftRound = [];
         let rankNets = [];
+        let previousRound = await findRound(eventID, roundNum - 1, Round);
+
 
         // SHOW EXISTING PERFORMANCES EXISTING LEFT NETS AND MORE
         if (roundExist) {
@@ -32,24 +33,21 @@ router.get('/get-single-round/:eventID/:roundNum', async (req, res, next) => {
                     path: "participant",
                     select: "firstname lastname"
                 });
-            // const existingNet = roundExist.nets;
-            // 61765dbdd966262e8bccd5fc
+
+            
+
             const allNetsIds = new Array();
             for (let i = 0; i < roundExist.nets.length; i++) {
                 allNetsIds.push(roundExist.nets[i]._id);
             }
-            const select = "participant net game1 game2 game3 game4 game5 game6 game7 game8 game9 game10 game11 game12 game13 game14 game15 pre_rank";
-            // console.log(allNetsIds);
+            const select = "participant net game1 game2 game3 game4 game5 game6 game7 game8 game9 game10 game11 game12 game13 game14 game15 pre_rank rank";
             const findNets = await Net.find({ _id: { $in: allNetsIds } }).populate({
                 path: "performance", select, populate: {
                     path: "participant",
                     select: "firstname lastname"
                 }
             });
-            // console.log(nets);
             rankNets = netRanking(findNets, parseInt(roundNum));
-            // const netRank = roundExist.nets[0].performance.sort(rankingRound1);
-            // console.log(rankNets);
         } else {
             performances = await Performance.find({ event: eventID }).populate({ path: "participant", select: "firstname lastname" }).exec();
         }
@@ -58,11 +56,18 @@ router.get('/get-single-round/:eventID/:roundNum', async (req, res, next) => {
             performances = await roundwiseRanking(performances, parseInt(roundNum), eventID);
         }
 
+        const leftPerformanceSet = new Set(leftRound.map((performance) => String(performance._id)));
+        const substractLeftedPerformances = [];
+        for (const performance of performances) {
+            if (leftPerformanceSet.has(String(performance._id))) continue;
+            substractLeftedPerformances.push(performance);
+        }
+        performances = substractLeftedPerformances;
 
-        // console.log(roundExist);
-        res.status(200).json({ msg: 'Getting Rounds', findRound: roundExist, rankNets, leftRound, performances });
+        return res.status(200).json({ msg: 'Getting Rounds', findRound: roundExist, rankNets, leftRound, performances, previousRound });
     } catch (error) {
-        console.log(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -72,7 +77,7 @@ router.get('/get-single-round/:eventID/:roundNum', async (req, res, next) => {
 
 
 
-// ⛏️⛏️ ASSIGN PLAYER TO THE NET - CREATE CREATE MORE NET ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
+
 router.get('/ranking/:eventID', async (req, res, next) => {
     try {
         const { eventID } = req.params;
@@ -83,8 +88,8 @@ router.get('/ranking/:eventID', async (req, res, next) => {
             if (round) {
                 rounds[`round${i}NR`] = round;
                 performances = round.performances;
-		performances = await roundwiseRanking(performances, i, eventID);
-		rounds[`round${i}`] = performances;
+                performances = await roundwiseRanking(performances, i, eventID);
+                rounds[`round${i}`] = performances;
             }
         }
         const allPerformances = await roundwiseRanking([], 6, eventID);
@@ -167,11 +172,12 @@ router.get('/ranking/:eventID', async (req, res, next) => {
  */
 
 
-        //res.status(201).json({ msg: "rank performance and inatilize performance", allPerformances, round1, round2, round3, round4, round5, round1NR, round2NR, round3NR, round4NR, round5NR })
+
         res.status(201).json({ msg: "rank performance and inatilize performance", allPerformances, ...rounds })
 
     } catch (error) {
-        console.log(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -180,14 +186,6 @@ router.get('/ranking/:eventID', async (req, res, next) => {
 
 
 
-
-
-
-
-
-
-
-// ⛏️⛏️ RANDOM REASSIGN ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
 
 
 
@@ -202,7 +200,8 @@ router.delete('/:eventID/:roundNum', ensureAuth, async (req, res, next) => {
         // console.log(req.params);
         res.status(200).json({ msg: 'Getting performance', deleteRound, deleteNets });
     } catch (error) {
-        console.log(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 

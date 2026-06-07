@@ -1,85 +1,132 @@
 /* ⛏️⛏️ SHOW ALL EVENTS, PARTICIPANT */
 
 import React, { Component } from 'react';
+import { Navigate, Link } from 'react-router-dom';
 import EventList from '../components/events/EventList';
-import { Navigate } from 'react-router-dom';
-import "../style/Dashboard.css";
-import { Link } from 'react-router-dom';
-import withNavigate from '../HOC/withNavigate';
+import withNavigate, { WithNavigateProps } from '../HOC/withNavigate';
 import { getAllEvents } from '../utils/handleRequests/event';
 import { IEvent } from '../types';
-
+import '../style/Dashboard.css';
 
 interface IDashboardState {
-    activeTab: string;
-    eventList: IEvent[];
-    isLoading: boolean;
+  activeTab: string;
+  eventList: IEvent[];
+  isLoading: boolean;
+  errorMessage: string;
 }
 
-interface IDashboardProps {
-    navigate: (path: string) => void;
-    // Add other props here if necessary
-}
+const INITIAL_STATE: IDashboardState = {
+  activeTab: 'events',
+  eventList: [],
+  isLoading: false,
+  errorMessage: '',
+};
 
-export class Dashboard extends Component<IDashboardProps, IDashboardState> {
-    private isMountedValue: boolean;
+const ERROR_MESSAGES = {
+  FETCH_EVENTS_FAILED: 'Failed to load events. Please try again.',
+} as const;
 
-    constructor(props: IDashboardProps) {
-        super(props);
+class Dashboard extends Component<WithNavigateProps, IDashboardState> {
+  private isComponentMounted: boolean;
 
-        this.isMountedValue = false;
-        this.state = {
-            activeTab: "events",
-            eventList: [],
-            isLoading: false,
-        };
+  constructor(props: WithNavigateProps) {
+    super(props);
 
-        this.updateList = this.updateList.bind(this);
-    }
+    this.isComponentMounted = false;
+    this.state = { ...INITIAL_STATE };
 
+    this.updateEventList = this.updateEventList.bind(this);
+  }
 
-    componentDidMount() {
-        this.isMountedValue = true;
-        // this.getAllEvents();
-        (async ()=>{
-            const eList = await getAllEvents();
-            this.setState({eventList: eList});
-        })()
-    }
+  componentDidMount(): void {
+    this.isComponentMounted = true;
+    this.fetchEvents();
+  }
 
-    async updateList(update: boolean) {
-        if (update) {
-            const eList = await getAllEvents();
-            this.setState({eventList: eList});
-        }
-    }
+  componentWillUnmount(): void {
+    this.isComponentMounted = false;
+    this.setState({ eventList: [] });
+  }
 
-    componentWillUnmount() {
-        this.isMountedValue = false;
+  private async fetchEvents(): Promise<void> {
+    this.setState({ isLoading: true, errorMessage: '' });
+
+    try {
+      const events = await getAllEvents();
+
+      if (this.isComponentMounted) {
         this.setState({
-            eventList: []
+          eventList: events || [],
+          isLoading: false,
         });
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      
+      if (this.isComponentMounted) {
+        this.setState({
+          isLoading: false,
+          errorMessage: ERROR_MESSAGES.FETCH_EVENTS_FAILED,
+          eventList: [],
+        });
+      }
+    }
+  }
+
+  async updateEventList(shouldUpdate: boolean): Promise<void> {
+    if (shouldUpdate) {
+      await this.fetchEvents();
+    }
+  }
+
+  private isAuthenticated(): boolean {
+    const token = localStorage.getItem('token');
+    return !!token;
+  }
+
+  private navigateToLogin(): void {
+    this.props.navigateToPath('/admin');
+  }
+
+  render(): React.ReactNode {
+    if (!this.isAuthenticated()) {
+      return <Navigate to="/admin" replace />;
     }
 
-    render() {
-        if (!localStorage.getItem('token')) return <Navigate to={"/admin"} />;
-        
-        return (
-            <div className="Dashboard">
-                <div className="container">
-                    <br />
-                    <Link className="btn btn-primary" to="/admin/list">Admin List</Link>
-                    <br />
-                    <br />
-                    <EventList
-                        isLoading={this.state.isLoading}
-                        updateList={this.updateList}
-                        eventList={this.state.eventList}
-                        pageFor="dashboard" />
-                </div>
+    const { isLoading, eventList, errorMessage } = this.state;
+
+    return (
+      <div className="Dashboard">
+        <div className="container">
+          <br />
+          <Link className="btn btn-primary" to="/admin/list">
+            Admin List
+          </Link>
+          <br />
+          <br />
+
+          {errorMessage && (
+            <div className="alert alert-danger" role="alert">
+              {errorMessage}
+              <button
+                className="btn btn-link"
+                onClick={() => this.fetchEvents()}
+              >
+                Retry
+              </button>
             </div>
-        );
-    }
+          )}
+
+          <EventList
+            isLoading={isLoading}
+            updateList={this.updateEventList}
+            eventList={eventList}
+            pageFor="dashboard"
+          />
+        </div>
+      </div>
+    );
+  }
 }
 
 export default withNavigate(Dashboard);

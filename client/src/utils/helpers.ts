@@ -1,5 +1,3 @@
-// @ts-nocheck
-
 import { INet } from "../types";
 import { ROUND_GAME_MAP } from "./constants";
 
@@ -7,7 +5,6 @@ import { ROUND_GAME_MAP } from "./constants";
 
 
 export const tabKeyFocusChange = () => {
-    // console.log("Tab key focus change");
     const wp = document.querySelectorAll('.winning-point');
     const scoreInputs = document.querySelectorAll('.input-score');
     const scoreInputsNoNet = document.querySelectorAll('.input-score-no-net');
@@ -30,7 +27,7 @@ export const tabKeyFocusChange = () => {
             secondGameInput.push(scoreInputs[i + 2], scoreInputs[i + 3]);
             thirdGameInput.push(scoreInputs[i + 4], scoreInputs[i + 5]);
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
         i += chunk;
     }
@@ -64,12 +61,22 @@ export const tabKeyFocusChange = () => {
 
 
 
-export const formattedDate = (eventISODate) => {
-    // (new Date(event.date).getMonth() + 1) + '-' + new Date(event.date).getDate() + '-' + new Date(event.date).getFullYear();
-    const year = new Date(eventISODate).getFullYear();
-    const day = new Date(eventISODate).getDate();
-    const month = new Date(eventISODate).getMonth() + 1
-    return month + "-" + day + "-" + year;
+/**
+ * Converts an ISO date string to the format:
+ * "7 June, 2026"
+ */
+export function formattedDate(isoString: string): string {
+  const date = new Date(isoString);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Invalid date string");
+  }
+
+  const day = date.getDate();
+  const month = date.toLocaleString("en-US", { month: "long" });
+  const year = date.getFullYear();
+
+  return `${day} ${month}, ${year}`;
 }
 
 interface IRoundResponse{complete: number[], incomplete: number[]}
@@ -93,7 +100,7 @@ export const checkRoundCompleted = (
   const gameKeys = ROUND_GAME_MAP[roundNumber] || [];
 
   if (!allNets || allNets.length === 0) {
-    result.incomplete.push(" ");
+    // result.incomplete.push(" ");
     return result;
   }
 

@@ -18,6 +18,7 @@ export interface IPerformance {
     _id: string;
     event: string;
     pre_rank: number;
+    rank?: number;
     participant: IParticipant;
 }
 export interface INet {
@@ -31,6 +32,7 @@ export interface IEvent {
     _id: string;
     title: string;
     date: string;
+    // desc: string;
     participants: IParticipant[];
 }
 

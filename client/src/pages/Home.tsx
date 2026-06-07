@@ -30,7 +30,7 @@ class Home extends Component<IHomeProps, IHomeState> {
     getEventID(id: string) {
         // this.setState({ currentEventID: id });
         // this.getSingleEvent();
-        console.log(id);
+        console.info(id);
     }
 
     async updateList(update: boolean) {
@@ -57,7 +57,6 @@ class Home extends Component<IHomeProps, IHomeState> {
                 <div className="container mt-3">
                     <EventList
                         isLoading={this.state.isLoading}
-                        pullEventID={this.getEventID}
                         updateList={this.updateList}
                         eventList={this.state.eventList}
                         pageFor="home"

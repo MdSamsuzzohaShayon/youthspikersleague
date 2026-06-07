@@ -15,7 +15,6 @@ const PlayersPointField = ({ net, gameNum, gor}: IPlayersPointFieldProps) => {
     // Define the nested function for returning JSX
     const renderPoint = (t1p1: IPerformance, t1p2: IPerformance, t2p1: IPerformance, t2p2: IPerformance) => {
 
-        // console.log({t1p1, t1p2, t2p1, t2p2});
         
 
         return (

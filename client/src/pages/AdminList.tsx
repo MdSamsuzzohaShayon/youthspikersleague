@@ -31,14 +31,12 @@ const AdminList = (props) => {
                     "authorization": `bearer ${token}`
                 }
             });
-            console.log("Get single event [AdminList.jsx] - ", response);
             const text = await response.text();
             const jsonResponse = await JSON.parse(text);
-            // console.log(jsonResponse);
             setAdminList(jsonResponse.admin ? jsonResponse.admin : []);
             setIsLoading(false);
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     }
 
@@ -101,7 +99,7 @@ const AdminList = (props) => {
             setNewAdmin({});
             setIsLoading(false);
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
         setIsLoading(false);
     }
@@ -121,7 +119,7 @@ const AdminList = (props) => {
             await fetch(`${hostname}/api/admin/delete/${adminID}`, options );
             getAllAdmins();
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
         setIsLoading(false);
     }

@@ -16,14 +16,13 @@ interface RoundTabProps {
 const RoundTab: React.FC<RoundTabProps> = ({ roundNumber, currentRound, onClick }) => {
     const isActive = currentRound === roundNumber;
     return (
-        <a 
+        <button 
             className={isActive ? "nav-link active" : "nav-link"} 
             onClick={(e) => onClick(e, roundNumber)}
-            href="#"
             role="tab"
         >
             Round {roundNumber}
-        </a>
+        </button>
     );
 };
 
@@ -49,16 +48,17 @@ const GAME_NUMBERS_BY_ROUND: Record<number, number[]> = {
 
 interface IRoundsProps {
     eventID: string;
+    eventName: string | null;
 }
 
-const Rounds = ({ eventID }: IRoundsProps) => {
+const Rounds = ({ eventName, eventID }: IRoundsProps) => {
     const [currentRound, setCurrentRound] = useState<number>(1);
     const [incompleteMessage, setIncompleteMessage] = useState<string | null>(null);
     const [isInitialRound, setIsInitialRound] = useState<boolean>(false);
     const [selectedRoundData, setSelectedRoundData] = useState<IRound | null>(null);
     const [leftRoundParticipants, setLeftRoundParticipants] = useState<IPerformance[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [allParticipants, setAllParticipants] = useState<IPerformance[]>([]);
+    const [performances, setPerformances] = useState<IPerformance[]>([]);
     const [rankedParticipantsInNets, setRankedParticipantsInNets] = useState([]);
     const [incompleteNets, setIncompleteNets] = useState<number[]>([]);
 
@@ -103,7 +103,7 @@ const Rounds = ({ eventID }: IRoundsProps) => {
 
             // Update participants
             if (responseData.performances?.length > 0) {
-                setAllParticipants(responseData.performances);
+                setPerformances(responseData.performances);
             }
 
             // Update left round participants
@@ -143,7 +143,7 @@ const Rounds = ({ eventID }: IRoundsProps) => {
     // Effect for initial data fetch
     useEffect(() => {
         fetchRoundData(1);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []); 
 
     // Effect for handling incomplete nets error message
     useEffect(() => {
@@ -182,13 +182,15 @@ const Rounds = ({ eventID }: IRoundsProps) => {
             return <div className="tab-pane fade show active">Event overview</div>;
         }
 
+        
+
         return (
             <div className="tab-pane fade show active">
                 <SingleRound
                     incomepleteMessage={incompleteMessage}
                     initialize={isInitialRound}
                     activeItemHandler={handleRoundChange}
-                    performances={allParticipants}
+                    performances={performances}
                     round={selectedRoundData}
                     rankPerformanceInNet={rankedParticipantsInNets}
                     roundNum={currentRound}
@@ -197,6 +199,7 @@ const Rounds = ({ eventID }: IRoundsProps) => {
                     game={currentRoundGames}
                     refetchFunc={refetchCurrentRound}
                     eventID={eventID}
+                    eventName={eventName}
                 />
             </div>
         );

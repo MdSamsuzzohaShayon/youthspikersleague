@@ -40,7 +40,6 @@ router.get('/:eventID', async (req, res, next) => {
 
 
 
-/* ⛏️⛏️ CREATE PARTICIPANT OR PERFORMANCE ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖  */
 router.post('/:eventID',
     ensureAuth,
     check('firstname', "Firstname must not empty").notEmpty(),
@@ -79,9 +78,10 @@ router.post('/:eventID',
                     new_performance.save(),
                 ]);
 
-                res.status(200).json({ msg: 'Create partipipant and referancing to event', participant, performance });
+                return res.status(200).json({ msg: 'Create partipipant and referancing to event', participant, performance });
             } catch (error) {
-                res.json(error);
+                console.error(error);
+                return res.status(500).json({ msg: error?.message || "Internal Server Error" });
             }
         }
     });
@@ -103,6 +103,7 @@ router.post('/:eventID',
 /* ⛏️⛏️ CREATE MULTIPLE PARTICIPANT ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖  */
 router.post('/multiple/:eventID', ensureAuth, async (req, res, next) => {
     const form = formidable({ multiples: false });
+    const { eventID } = req.params;
 
     try {
         const { fields, files } = await new Promise((resolve, reject) => {
@@ -118,14 +119,16 @@ router.post('/multiple/:eventID', ensureAuth, async (req, res, next) => {
         }
 
 
+        const lastRankedPerformance = await Performance.findOne({event: eventID}).sort({ rank: -1 }).lean();
+        const lastRank = lastRankedPerformance?.rank || 0;
         const jsonObj = await csv().fromFile(files.file[0].filepath);
 
         const errors = [];
         const allParticipant = [];
         let msg = null;
-        for (let obj of jsonObj) {
-            const newParticipant = replaceKeys(obj, req.params.eventID);
-            if (newParticipant.firstname && newParticipant.lastname && newParticipant.city) {
+        for (let i = 0; i < jsonObj.length; i += 1) {
+            const newParticipant = replaceKeys(jsonObj[i], eventID);
+            if (newParticipant.firstname && newParticipant.lastname) {
                 allParticipant.push(newParticipant);
             } else {
                 msg = "Some participant doesn't have firstname, lastname, or city; those are not included";
@@ -136,21 +139,29 @@ router.post('/multiple/:eventID', ensureAuth, async (req, res, next) => {
         let participants = [];
         if (errors.length === 0) {
             participants = await Participant.insertMany(allParticipant);
-            const performanceList = participants.map(participant => ({ participant: participant._id, event: req.params.eventID }));
+            const performanceList = participants.map((participant, i) => ({ participant: participant._id, event: req.params.eventID, rank: lastRank + i + 1 }));
             await Performance.insertMany(performanceList);
+
+            const participantSet = new Set();
             for (let participant of participants) {
-                await Event.findByIdAndUpdate(
-                    { _id: req.params.eventID },
-                    { $push: { participants: participant._id } },
-                    { returnDocument: 'after' }
-                );
+                participantSet.add(participant._id);
             }
+            await Event.updateOne(
+                { _id: req.params.eventID },
+                {
+                    $addToSet: {
+                        participants: {
+                            $each: [...participantSet],
+                        },
+                    },
+                }
+            );
         }
 
-        res.json({ errors, eventID: req.params.eventID, files: participants });
+        return res.json({ errors, eventID: req.params.eventID, files: participants });
     } catch (error) {
         console.error(error);
-        next(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -282,7 +293,8 @@ router.put('/update-performance/:eventID/:roundNum', ensureAuth, async (req, res
                 // }
             }
         } catch (error) {
-            console.log(error);
+            console.error(error);
+            return res.status(500).json({ msg: error?.message || "Internal Server Error" });
         }
 
     });
@@ -357,7 +369,8 @@ router.put('/update-single/:roundNum', ensureAuth, async (req, res, next) => {
         await Promise.all(updatePromises);
         res.status(200).json({ msg: "Updated score successfully" });
     } catch (error) {
-        next(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -411,13 +424,6 @@ router.post('/exports/:eventID', ensureAuth, async (req, res, next) => {
         const { filename } = req.body;
         const allPerformances = await Performance.find({ event: req.params.eventID }).populate({ path: "participant", select: "firstname lastname" });
 
-
-
-
-
-
-
-
         // Create a new instance of a Workbook class
         const workbook = new xl.Workbook();
 
@@ -456,15 +462,41 @@ router.post('/exports/:eventID', ensureAuth, async (req, res, next) => {
 
 
 
-        // res.json({ filename });
-        // res.download();
+        res.json({ filename });
+        res.download();
     } catch (error) {
-        console.log(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
 
 
+router.put('/rank/update/:event/:round', ensureAuth, async (req, res, next) => {
+    try {
+        const { performances: rankedPerformances } = req.body; // {_id, rank}
+        const performanceMap = new Map();
+        for (const performance of rankedPerformances) {
+            performanceMap.set(performance._id, performance.rank);
+        }
+        // Get only those performance who are on the round (did not left)
+        const performances = await Performance.find({ event: req.params.event }).populate({ path: "participant", select: "firstname lastname" });
+        const updatePromises = [];
+        for (const performance of performances) {
+            const inputRank = performanceMap.get(performance._id);
+            if (inputRank) {
+                updatePromises.push({ _id: performance._id }, { $set: { rank: inputRank.rank } });
+            }
+        }
+        await Promise.all(updatePromises);
+        const updatedPerformances = await Performance.find({ event: req.params.event }).populate({ path: "participant", select: "firstname lastname" }).lean();
+        return res.status(200).json({ msg: "Ranked listed performances", performances: updatedPerformances })
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
+
+    }
+});
 
 /* ⛏️⛏️ DELETE PARTICIPANT ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖  */
 router.delete('/:id', ensureAuth, async (req, res, next) => {
@@ -478,7 +510,8 @@ router.delete('/:id', ensureAuth, async (req, res, next) => {
             res.status(200).json({ msg: 'Only super user are able to delete any perticipant' });
         }
     } catch (error) {
-        res.json(error)
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -490,7 +523,8 @@ router.get('/get-performance/:eventID/:roundNum', async (req, res, next) => {
         const rankingPerformance = performances.sort(wholeRanking);
         res.status(200).json({ msg: 'Get all performance of an event', rankingPerformance });
     } catch (error) {
-        console.log(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 

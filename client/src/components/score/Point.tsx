@@ -1,25 +1,23 @@
 import React from 'react';
 import { round1Total, round2Total, round3Total, round4Total, round5Total, totalPoint, roundwiseTotalPoint } from '../../utils/addTotalPoint';
 import { round1TD, round2TD, round3TD, round4TD, round5TD, totalDeferential, roundwiseTotalPD } from '../../utils/pointDeferential';
-import { getRankingNumber } from '../../utils/tptd';
 
 
 const Point = (props) => {
-    // console.log(props);
 
     const addWithRound = (roundNum, p, roundwise) => {
         if (roundwise === true) {
             switch (roundNum) {
                 case 1:
                     return (<React.Fragment>
-                        {Math.sign(round1Total(p)) === -1 ? <td className="text-danger">dd {round1Total(p).toFixed(2)}</td> : <td className="text-success"> {round1Total(p).toFixed(2)}</td>}
+                        {Math.sign(round1Total(p)) === -1 ? <td className="text-danger">{round1Total(p).toFixed(2)}</td> : <td className="text-success"> {round1Total(p).toFixed(2)}</td>}
                         {Math.sign(round1TD(p)) === -1 ? <td className="text-danger"> {round1TD(p).toFixed(2)}</td> : <td className="text-success"> {round1TD(p).toFixed(2)}</td>}
                         {/* <td> {round1Total(p)}</td> */}
                         {/* <td>{round1TD(p)}</td> */}
                     </React.Fragment>);
                 case 2:
                     return (<React.Fragment>
-                        {Math.sign(round2Total(p)) === -1 ? <td className="text-danger"> dd{round2Total(p).toFixed(2)}</td> : <td className="text-success"> {round2Total(p).toFixed(2)}</td>}
+                        {Math.sign(round2Total(p)) === -1 ? <td className="text-danger">{round2Total(p).toFixed(2)}</td> : <td className="text-success"> {round2Total(p).toFixed(2)}</td>}
                         {Math.sign(round2TD(p)) === -1 ? <td className="text-danger"> {round2TD(p).toFixed(2)}</td> : <td className="text-success"> {round2TD(p).toFixed(2)}</td>}
                     </React.Fragment>);
                 case 3:
@@ -50,7 +48,6 @@ const Point = (props) => {
 
     }
 
-    // console.log(assendingPerformance);
     return (
         <React.Fragment>
             <table className="table table-bordered table-striped table-hover">
@@ -65,7 +62,7 @@ const Point = (props) => {
                 <tbody>
                     {props.pp.map((p, i) => (
                         <tr key={i}>
-                            <td>{getRankingNumber(i, props.pp, props.roundNum)}</td>
+                            <td className='rank-num d-flex w-full justify-content-between'>{1+1}</td>
                             <td>{p.participant.firstname + " " + p.participant.lastname} </td>
                             {addWithRound(props.roundNum, p, props.roundwise)}
                         </tr>

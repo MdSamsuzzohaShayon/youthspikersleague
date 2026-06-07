@@ -60,7 +60,6 @@ module.exports.findRound = async (eventID, roundNum, Round) => {
         }
         ])
         .exec();
-    // console.log("Find Round - ", round);
     return round;
 }
 

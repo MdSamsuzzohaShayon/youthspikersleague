@@ -87,7 +87,7 @@ class Score extends Component<IScoreProps, IScoreState> {
             this.setState({ isLoading: false });
 
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
 
     }
@@ -114,7 +114,7 @@ class Score extends Component<IScoreProps, IScoreState> {
 
             this.setState({ isLoading: false });
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
 
     }

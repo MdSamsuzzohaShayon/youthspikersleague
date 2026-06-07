@@ -1,153 +1,295 @@
-// @ts-nocheck
+import React, {
+    ChangeEvent,
+    SyntheticEvent,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import { Button, Modal } from "react-bootstrap";
+import { hostname } from "../../utils/global";
 
-import React, { useState } from 'react';
-import { Modal, Button } from "react-bootstrap";
-import { hostname } from '../../utils/global';
+interface ValidationError {
+    msg: string;
+}
+
+interface ParticipantForm {
+    firstname: string;
+    lastname: string;
+    email: string;
+    cell: string;
+    birthdate: string;
+    payment_amount: string;
+    payment_method: string;
+    city: string;
+}
+
+interface Participant {
+    [key: string]: unknown;
+}
+
+interface IAddParticipantProps {
+    eventID: string;
+    eventName: string;
+    handleSaveParticipant: (participant: Participant) => void;
+}
+
+const INITIAL_FORM: ParticipantForm = {
+    firstname: "",
+    lastname: "",
+    email: "",
+    cell: "",
+    birthdate: "",
+    payment_amount: "",
+    payment_method: "Cash",
+    city: "",
+};
+
+function AddParticipant({
+    eventID,
+    eventName,
+    handleSaveParticipant,
+}: IAddParticipantProps) {
 
 
-function AddParticipant(props) {
-    let controller = new AbortController();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [participantForm, setParticipantForm] =
+        useState<ParticipantForm>(INITIAL_FORM);
+    const [validationErrors, setValidationErrors] = useState<
+        ValidationError[]
+    >([]);
 
+    const uniqueErrors = useMemo(() => {
+        return Array.from(
+            new Map(
+                validationErrors.map((error) => [error.msg, error])
+            ).values()
+        );
+    }, [validationErrors]);
 
-    const [show, setShow] = useState(false);
-    const [participant, setPartitipant] = useState({});
-    const [errors, setErrors] = useState([]);
-
-
-
-    const handleClose = () => {
-        setErrors([]);
-        setShow(false)
+    const openModal = () => {
+        setValidationErrors([]);
+        setIsModalOpen(true);
     };
-    const handleShow = () => setShow(true);
 
+    const closeModal = () => {
+        setValidationErrors([]);
+        setParticipantForm(INITIAL_FORM);
+        setIsModalOpen(false);
+    };
 
-    // ⛏️⛏️GETTING INPUT VALUE ON CHANGING  
-    function handleChange(evt) {
-        setPartitipant({
-            ...participant,
-            [evt.target.name]: evt.target.value
-        });
-    }
+    const handleInputChange = (
+        event: ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => {
+        const { name, value } = event.target;
 
+        setParticipantForm((previousState) => ({
+            ...previousState,
+            [name]: value,
+        }));
+    };
 
-    // ⛏️⛏️ ADD A PARTICIPANT ➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖➖ 
-    const handleSaveParticipant = async (e) => {
-        e.preventDefault();
-        setErrors([]);
+    const saveParticipant = async (
+        e: SyntheticEvent
+    ) => {
+        e
+        setValidationErrors([]);
+
         try {
+            const token = localStorage.getItem("token");
             const options = {
                 method: "POST",
-                credentials: 'include',
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
                 },
-                body: JSON.stringify(participant),
-                signal: controller.signal
+                body: JSON.stringify(participantForm)
             }
-            // console.log("props");
-            // console.log(props);
-            // http://localhost:9290/api/admin/dashboard/participant
-            const response = await fetch(`${hostname}/api/performance/${props.eventID}`, options);
-            console.log("Add participant - ", response);
-            const text = await response.text();
-            const jsonRes = JSON.parse(text);
-            if (jsonRes.errors) {
-                if (jsonRes.errors.length > 1) {
-                    setErrors([...jsonRes.errors]);
-                }
-                controller = null;
-            } else {
-                // console.log("JSON - ",jsonRes);
-                // props.updateEvent(true);
-                props.handleSaveParticipant(jsonRes);
-                setShow(false);
-                setPartitipant({});
-                controller = null;
+            const response = await fetch(
+                `${hostname}/api/performance/${eventID}`,
+                options
+            );
 
+            const data = await response.json();
+
+            if (!response.ok || data.errors) {
+                setValidationErrors(data.errors ?? [
+                    { msg: "Unable to save participant." },
+                ]);
+                return;
             }
 
+            handleSaveParticipant(data);
+
+            closeModal();
         } catch (error) {
-            console.log(error);
+
+            setValidationErrors([
+                {
+                    msg: "Something went wrong. Please try again.",
+                },
+            ]);
+
+            console.error(error);
         }
     };
 
-
-    // useEffect(() => {
-    //     return () => controller?.abort();
-    // });
     return (
-        <React.Fragment>
-
+        <>
             <h3 className="h3">Add participants for this events</h3>
-            {errors && [...new Set(errors)].map((e, i) => <p key={i} className="text-warning">{e.msg}</p>)}
 
-            <Button variant="primary" onClick={handleShow}>
+            {uniqueErrors.map((error) => (
+                <p key={error.msg} className="text-warning">
+                    {error.msg}
+                </p>
+            ))}
+
+            <Button variant="primary" onClick={openModal}>
                 Add participants
             </Button>
 
-            <Modal show={show} onHide={handleClose}>
+            <Modal show={isModalOpen} onHide={closeModal}>
                 <Modal.Header closeButton>
-                    <Modal.Title>Some event</Modal.Title>
+                    <Modal.Title>{eventName}</Modal.Title>
                 </Modal.Header>
+
                 <Modal.Body>
-                    {errors && [...new Set(errors)].map((e, i) => <p key={i} className="text-danger">{e.msg}</p>)}
-                    {/* // firstname,lastname,email,cell,birthdate,city, eventID */}
+                    {uniqueErrors.map((error) => (
+                        <p key={error.msg} className="text-danger">
+                            {error.msg}
+                        </p>
+                    ))}
+
                     <form>
+                        <FormInput
+                            id="firstname"
+                            label="First Name*"
+                            placeholder="Enter Your First Name"
+                            required
+                            value={participantForm.firstname}
+                            onChange={handleInputChange}
+                        />
+
+                        <FormInput
+                            id="lastname"
+                            label="Last Name*"
+                            required
+                            placeholder="Enter Your Last Name"
+                            value={participantForm.lastname}
+                            onChange={handleInputChange}
+                        />
+
+                        <FormInput
+                            id="email"
+                            type="email"
+                            label="Email"
+                            placeholder="Enter Your Email"
+                            value={participantForm.email}
+                            onChange={handleInputChange}
+                        />
+
+                        <FormInput
+                            id="cell"
+                            label="Phone"
+                            placeholder="Enter Your Phone Number"
+                            value={participantForm.cell}
+                            onChange={handleInputChange}
+                        />
+
+                        <FormInput
+                            id="birthdate"
+                            type="date"
+                            label="Birthdate"
+                            value={participantForm.birthdate}
+                            onChange={handleInputChange}
+                        />
+
+                        <FormInput
+                            id="payment_amount"
+                            label="Payment Amount"
+                            placeholder="Enter Payment Amount"
+                            value={participantForm.payment_amount}
+                            onChange={handleInputChange}
+                        />
+
                         <div className="form-group">
-                            <label htmlFor="firstname">First Name*</label>
-                            <input type="text" className="form-control" id="firstname" name="firstname" onChange={handleChange} placeholder="Enter Your First name" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="lastname">Last Name*</label>
-                            <input type="text" className="form-control" id="lastname" name="lastname" onChange={handleChange} placeholder="Enter Your Last Name" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="firstname">Email</label>
-                            <input type="email" className="form-control" id="email" name="email" onChange={handleChange} placeholder="Enter Your Email" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="cell">Phone</label>
-                            <input type="text" className="form-control" id="cell" name="cell" onChange={handleChange} placeholder="Enter Your Phone Number" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="birthdate">Birthdate</label>
-                            <input type="date" className="form-control" id="birthdate" name="birthdate" onChange={handleChange} placeholder="Enter Your Birthdate" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="payment_amount">Payment Amount</label>
-                            <input type="text" className="form-control" id="payment_amount" name="payment_amount" onChange={handleChange} placeholder="Enter Your Payment Amount" />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="payment_method">Payment Method</label>
-                            <select className="form-control" id="payment_method" name="payment_method" onChange={handleChange}>
+                            <label htmlFor="payment_method">
+                                Payment Method
+                            </label>
+
+                            <select
+                                id="payment_method"
+                                name="payment_method"
+                                className="form-control"
+                                value={participantForm.payment_method}
+                                onChange={handleInputChange}
+                            >
                                 <option value="Cash">Cash</option>
                                 <option value="Check">Check</option>
                                 <option value="Venmo">Venmo</option>
                             </select>
                         </div>
-                        <div className="form-group">
-                            <label htmlFor="city">City*</label>
-                            <input type="text" className="form-control" id="city" name="city" onChange={handleChange} placeholder="Enter Your City" />
-                        </div>
 
-                        <div className="form-group d-none">
-                            <input type="text" className="form-control" id="emailID" value={props.eventID} readOnly name="eventID" />
-                        </div>
+                        <FormInput
+                            id="city"
+                            label="City"
+                            placeholder="Enter Your City"
+                            value={participantForm.city}
+                            onChange={handleInputChange}
+                        />
                     </form>
                 </Modal.Body>
+
                 <Modal.Footer>
-                    <Button variant="secondary" onClick={handleClose}>
+                    <Button variant="secondary" onClick={closeModal}>
                         Close
                     </Button>
-                    <Button variant="primary" onClick={handleSaveParticipant}  >
+
+                    <Button variant="primary" onClick={saveParticipant}>
                         Save Changes
                     </Button>
                 </Modal.Footer>
             </Modal>
-
-        </React.Fragment>
-    )
+        </>
+    );
 }
 
-export default AddParticipant
+interface FormInputProps {
+    id: keyof ParticipantForm;
+    label: string;
+    value: string;
+    placeholder?: string;
+    required?: boolean;
+    type?: string;
+    onChange: (
+        event: ChangeEvent<HTMLInputElement>
+    ) => void;
+}
+
+function FormInput({
+    id,
+    label,
+    value,
+    placeholder,
+    required,
+    type = "text",
+    onChange,
+}: FormInputProps) {
+    return (
+        <div className="form-group">
+            <label htmlFor={id}>{label}</label>
+
+            <input
+                id={id}
+                name={id}
+                type={type}
+                required={required || false}
+                className="form-control"
+                value={value}
+                placeholder={placeholder}
+                onChange={onChange}
+            />
+        </div>
+    );
+}
+
+export default React.memo(AddParticipant);

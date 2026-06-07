@@ -15,7 +15,6 @@ const PlayersPointDifferential = ({ net, gameNum, gor }: IPlayersPointDifferenti
         const t1pd = t1p1[gameKey]?.pointDeferential ? t1p1[gameKey].pointDeferential : null;
         const t2pd = t2p1[gameKey]?.pointDeferential ? t2p1[gameKey].pointDeferential : null;
 
-        console.log({gor, gameNum, t1p1, t1p2, t2p1, t2p2});
         
 
         return (

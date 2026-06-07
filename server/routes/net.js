@@ -37,8 +37,8 @@ router.post('/assign-initial-net/:eventId', ensureAuth, async (req, res) => {
 
         return res.status(200).json({ msg: 'Assigned to initial nets randomly', round, netCount: netIds.length });
     } catch (error) {
-        console.error('[assign-initial-net]', error);
-        return res.status(500).json({ msg: 'Internal server error' });
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -85,8 +85,8 @@ router.post('/pre-rank-assign-net/:eventId/:roundNum', ensureAuth, async (req, r
 
         return res.status(201).json({ msg: 'Pre-ranked and assigned to nets', params: req.params });
     } catch (error) {
-        console.error('[pre-rank-assign-net]', error);
-        return res.status(500).json({ msg: error.message || 'Internal server error' });
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -104,8 +104,8 @@ router.post('/assign-net/:eventId/:roundNum', ensureAuth, async (req, res) => {
 
         return res.status(201).json({ msg: 'Assigned to nets by rank', params: req.params });
     } catch (error) {
-        console.error('[assign-net]', error);
-        return res.status(500).json({ msg: 'Internal server error' });
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -127,8 +127,8 @@ router.post('/twoU-twoD-assign-net/:eventId/:roundNum', ensureAuth, async (req, 
 
         return res.status(201).json({ msg: 'Assigned to nets with 2-up 2-down pattern', params: req.params });
     } catch (error) {
-        console.error('[twoU-twoD-assign-net]', error);
-        return res.status(500).json({ msg: 'Internal server error' });
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -150,8 +150,8 @@ router.post('/oneU-oneD-assign-net/:eventId/:roundNum', ensureAuth, async (req, 
 
         return res.status(201).json({ msg: 'Assigned to nets with 1-up 1-down pattern', params: req.params });
     } catch (error) {
-        console.error('[oneU-oneD-assign-net]', error);
-        return res.status(500).json({ msg: 'Internal server error' });
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -174,8 +174,8 @@ router.post('/random-assign-net/:eventId/:roundNum', ensureAuth, async (req, res
 
         return res.status(201).json({ msg: 'Randomly assigned to nets', params: req.params });
     } catch (error) {
-        console.error('[random-assign-net]', error);
-        return res.status(500).json({ msg: 'Internal server error' });
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 

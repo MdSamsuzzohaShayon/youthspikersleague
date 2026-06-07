@@ -29,7 +29,7 @@ function ParticipantRow({ participant, index, updateEvent, setErrorList }: IPart
           }
         });
         if (response.status === 200) {
-          console.log("Delete participant [Participant.jsx] - ", response);
+          console.info("Delete participant [Participant.jsx] - ", response);
           updateEvent(true);
         }
       } else {
@@ -38,7 +38,7 @@ function ParticipantRow({ participant, index, updateEvent, setErrorList }: IPart
       }
 
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   }
 

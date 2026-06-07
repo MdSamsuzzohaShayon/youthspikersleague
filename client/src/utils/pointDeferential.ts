@@ -1,22 +1,17 @@
-export const totalDeferential = (performance) => {
-    let deferential = 0;
+export const totalDeferential = (performance): number => {
+    let deferential: number = 0;
     try {
         deferential = round1TD(performance) + round2TD(performance) + round3TD(performance) + round4TD(performance) + round5TD(performance);
-
-        // if (performance.game13) { let pd = performance.game13.pointDeferential.split('-'); deferential += parseInt(pd[0]) - parseInt(pd[1]); }
-        // if (performance.game14) { let pd = performance.game14.pointDeferential.split('-'); deferential += parseInt(pd[0]) - parseInt(pd[1]); }
-        // if (performance.game15) { let pd = performance.game15.pointDeferential.split('-'); deferential += parseInt(pd[0]) - parseInt(pd[1]); }
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
-    // console.log();
 
 
     return deferential;
 }
 
 
-export const roundwiseTotalPD = (performance, game1, game2, game3) => {
+export const roundwiseTotalPD = (performance, game1, game2, game3): number => {
     let pointDifferential = 0;
     if (performance) {
         if (performance[game1]) pointDifferential += performance[game1].pointDeferential;
@@ -30,7 +25,7 @@ export const roundwiseTotalPD = (performance, game1, game2, game3) => {
 
 
 
-export const round1TD = (performance) => {
+export const round1TD = (performance): number => {
     let deferential = 0;
     try {
 
@@ -38,16 +33,15 @@ export const round1TD = (performance) => {
         if (performance.game2) { deferential += performance.game2.pointDeferential; };
         if (performance.game3) { deferential += performance.game3.pointDeferential; };
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
-    // console.log();
 
 
     return deferential;
 }
 
 
-export const round2TD = (performance) => {
+export const round2TD = (performance): number => {
     let deferential = 0;
     try {
 
@@ -55,9 +49,8 @@ export const round2TD = (performance) => {
         if (performance.game5) { deferential += performance.game5.pointDeferential; };
         if (performance.game6) { deferential += performance.game6.pointDeferential; };
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
-    // console.log();
 
 
     return deferential;
@@ -65,7 +58,7 @@ export const round2TD = (performance) => {
 
 
 
-export const round3TD = (performance) => {
+export const round3TD = (performance): number => {
     let deferential = 0;
     try {
 
@@ -73,9 +66,8 @@ export const round3TD = (performance) => {
         if (performance.game8) { deferential += performance.game8.pointDeferential; };
         if (performance.game9) { deferential += performance.game9.pointDeferential; };
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
-    // console.log();
 
 
     return deferential;
@@ -84,7 +76,7 @@ export const round3TD = (performance) => {
 
 
 
-export const round4TD = (performance) => {
+export const round4TD = (performance): number => {
     let deferential = 0;
     try {
 
@@ -92,9 +84,8 @@ export const round4TD = (performance) => {
         if (performance.game11) { deferential += performance.game11.pointDeferential; };
         if (performance.game12) { deferential += performance.game12.pointDeferential; };
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
-    // console.log();
 
 
     return deferential;
@@ -103,7 +94,7 @@ export const round4TD = (performance) => {
 
 
 
-export const round5TD = (performance) => {
+export const round5TD = (performance): number => {
     let deferential = 0;
     try {
 
@@ -111,9 +102,8 @@ export const round5TD = (performance) => {
         if (performance.game14) { deferential += performance.game14.pointDeferential; };
         if (performance.game15) { deferential += performance.game15.pointDeferential; };
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
-    // console.log();
 
 
     return deferential;

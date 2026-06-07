@@ -38,7 +38,6 @@ const Participants = (props) => {
             }
             // http://localhost:4000/api/admin/dashboard/participant
             const response = await fetch(`${hostname}/api/performance/${props.eventID}`, options);
-            console.log("Add participant & performance [Participants.jsx] - ", response);
             const text = await response.text();
             const jsonRes = JSON.parse(text);
             if (jsonRes.errors) {
@@ -51,7 +50,7 @@ const Participants = (props) => {
                 setPartitipant({});
             }
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     };
 
@@ -102,20 +101,18 @@ const Participants = (props) => {
             const response = await fetch(`${hostname}/api/performance/multiple/${props.eventID}`, options);
             const text = await response.text();
             const json = JSON.parse(text);
-            // console.log(json);
             if (json.errors) {
                 setErrorList([...json.errors]);
             }
             props.updateEvent(true);
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
         setCsvShow(false);
     }
 
 
 
-    console.log(props.participants);
     
 
 

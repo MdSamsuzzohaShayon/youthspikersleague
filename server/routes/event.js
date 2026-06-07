@@ -49,7 +49,8 @@ router.get('/', async (req, res, next) => {
         // console.log(docs);
         res.status(200).json({ msg: 'Get All Events', events: docs });
     } catch (error) {
-        res.json(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -64,7 +65,8 @@ router.get('/:id', async (req, res, next) => {
         // Story.find().populate({ path: 'fans', select: 'name' }).populate({ path: 'fans', select: 'email' });
         res.status(200).json({ msg: 'Get Single Events', events: event });
     } catch (error) {
-        res.json(error);
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 
@@ -82,7 +84,8 @@ router.delete('/:id', ensureAuth, async (req, res, next) => {
         const round = await Round.deleteMany({ event: req.params.id });
         res.status(200).json({ msg: 'Event deleted', event, participant, performance, net });
     } catch (error) {
-        console.log(error)
+        console.error(error);
+        return res.status(500).json({ msg: error?.message || "Internal Server Error" });
     }
 });
 

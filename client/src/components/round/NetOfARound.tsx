@@ -22,6 +22,8 @@ interface INetOfARound {
 
 function NetOfARound(props: INetOfARound) {
 
+
+
     const handleSingleScoreUpdate = async (innerGN: number | null, netID: string, winningPoint: number | null,  score?: number, myTeam?: string[], opTeam?: string[]) => {
         try {
             const token = localStorage.getItem("token");
@@ -40,7 +42,7 @@ function NetOfARound(props: INetOfARound) {
             
 
         } catch (error) {
-            console.log(error);
+            console.error(error);
         }
     }
 

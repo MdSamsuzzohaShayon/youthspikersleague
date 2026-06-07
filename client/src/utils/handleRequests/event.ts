@@ -8,7 +8,6 @@ interface IEventResponse {
 export async function getAllEvents(): Promise<IEvent[]> {
     try {
         const response = await fetch(`${hostname}/api/event`, { method: "GET" });
-        console.log("Get all events [Dashboard.tsx] - ", response);
 
         if (!response.ok) {
             throw new Error(`Error fetching events: ${response.statusText}`);
@@ -27,7 +26,6 @@ export async function getAllEvents(): Promise<IEvent[]> {
 export async function getSingleEvent(id: string): Promise<IEvent | null> {
     try {
         const response = await fetch(`${hostname}/api/event/${id}`, { method: "GET" });
-        console.log("Get single event [SingleEvent.tsx] - ", response);
 
         if (!response.ok) {
             throw new Error(`Error fetching event: ${response.statusText}`);

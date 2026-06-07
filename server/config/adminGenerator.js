@@ -21,7 +21,7 @@ async function adminGenerator() {
             console.log("createAdmin -> ", createAdmin);
         }
     } catch (error) {
-        console.log(error);
+        console.error(error);
     }
 }
 
